@@ -666,7 +666,13 @@ class H(BaseHTTPRequestHandler):
             elif self.path == '/api/parse':
                 self._json(build_review(req['sheet_path'], req.get('edits')))
             elif self.path == '/api/generate':
-                self._json(generate(req))
+                if ONLINE:
+                    self._json({
+                        'error': '온라인 버전은 분석 체험만 제공합니다. '
+                                 '실제 쇼파일은 오프라인 버전에서 생성해 주세요.'
+                    }, 403)
+                else:
+                    self._json(generate(req))
             elif self.path == '/api/set_lan':
                 c = config()
                 c['lan_mode'] = bool(req.get('on'))
@@ -721,6 +727,11 @@ h1{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:21px;font-we
 .offlinebtn{display:none;align-items:center;gap:8px;padding:11px 15px;border-radius:12px;background:rgba(5,20,42,.52);border:1px solid rgba(255,255,255,.42);color:#fff;font:750 12px/1 -apple-system,"Apple SD Gothic Neo",sans-serif;text-decoration:none;white-space:nowrap;transition:.15s}
 .offlinebtn:hover{background:rgba(5,20,42,.75);transform:translateY(-1px)}
 .offlinebtn .os{font:800 9px/1 ui-monospace,SFMono-Regular,monospace;color:#0E5FCC;background:#fff;border-radius:5px;padding:4px 5px}
+.trialbanner{display:none;align-items:center;gap:16px;margin:-10px 0 24px;padding:18px 20px;border:1px solid rgba(24,119,242,.28);border-radius:16px;background:linear-gradient(135deg,rgba(24,119,242,.13),rgba(77,150,245,.05));box-shadow:0 5px 18px rgba(12,34,68,.07)}
+.trialbanner .trialicon{width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:12px;background:#1877F2;color:#fff;font-size:20px}
+.trialbanner .trialcopy{flex:1}.trialbanner .trialtitle{font-size:15px;font-weight:850}.trialbanner .trialdesc{margin-top:2px;color:var(--tx2);font-size:13px}
+.trialdownload{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:11px;background:#1877F2;color:#fff;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 5px 14px rgba(24,119,242,.25)}
+.trialdownload:hover{background:#0E5FCC}
 .toast{position:fixed;top:20px;left:50%;z-index:20;transform:translate(-50%,-20px);padding:11px 16px;border-radius:12px;background:#0C2244;color:#fff;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:.2s}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .step{font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--step);margin:26px 0 10px}
@@ -787,6 +798,7 @@ input[type=text]:focus{border-color:var(--accent)}
   .templatebtn{flex:1;justify-content:center}
   .searchrow{flex-wrap:wrap}
   .searchrow input{flex-basis:100%}
+  .trialbanner{align-items:flex-start;flex-wrap:wrap}.trialdownload{width:100%}
 }
 /* 검토 테이블 */
 #review{display:none}
@@ -824,6 +836,11 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
     <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="라이트/다크 전환">&#127769;</button>
   </div>
 </header>
+<div class="trialbanner" id="trialbanner">
+  <div class="trialicon">&#128269;</div>
+  <div class="trialcopy"><div class="trialtitle">온라인 버전은 채널시트 분석 체험판입니다</div><div class="trialdesc">업로드한 채널의 네이밍·스테레오 페어·플러그인 체인을 미리 확인할 수 있습니다. 실제 DM7·KLANG·SuperRack 쇼파일 생성과 저장은 오프라인 버전을 이용해 주세요.</div></div>
+  <a class="trialdownload" href="/download/offline">&#128187;&nbsp; 오프라인 생성기 다운로드</a>
+</div>
 <div class="toast" id="toast"></div>
 
 <div class="step">1 &middot; 채널시트 선택</div>
@@ -933,6 +950,12 @@ function unresolved(){
 }
 function updateGo(){
   const g=document.getElementById('go');
+  if(isOnline){
+    g.disabled=false;
+    g.onclick=()=>{window.location.href='/download/offline';};
+    g.innerHTML='&#128187;&nbsp; 실제 쇼파일 생성하기 &mdash; 오프라인 버전 다운로드';
+    return;
+  }
   const any=st.dm7.enabled||st.klang.enabled||st.sprk.enabled;
   const u=unresolved();
   g.disabled=!sel||!any||busy||!review||u>0;
@@ -1020,12 +1043,13 @@ async function load(){
   if(r.online){
     document.querySelector('.searchrow').innerHTML=`<button class="btn" style="width:100%;padding:14px;font-weight:700" onclick="document.getElementById('uploadInput').click()">채널시트 업로드 (.numbers / .xlsx)</button>`;
     document.querySelector('.offlinebtn').style.display='flex';
+    document.getElementById('trialbanner').style.display='flex';
     document.querySelectorAll('.folderline').forEach(el=>el.style.display='none');
     document.querySelectorAll('.saverow').forEach(el=>{
       el.style.display='none';
       if(el.previousElementSibling?.classList.contains('optt'))el.previousElementSibling.style.display='none';
     });
-    document.getElementById('outputsStep').innerHTML='3 &middot; 출력 &middot; 세부 옵션';
+    document.getElementById('outputsStep').innerHTML='3 &middot; 생성 옵션 미리보기 &mdash; 실제 생성은 오프라인 버전에서';
     st.klang.presets_copy=false;
     document.querySelector('#klangopts [data-key="presets_copy"]')?.remove();
   }

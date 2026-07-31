@@ -2,6 +2,11 @@
 
 이 프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/) 형식의 버전 번호를 사용합니다.
 
+## [0.2.4] - 2026-07-31
+
+- macOS에서 여전히 열리지 않는 Numbers 원본 ZIP 제공 철회
+- 검증된 XLSX 작성 예제만 제공하도록 복구
+
 ## [0.2.3] - 2026-07-31
 
 - 사용자가 Finder에서 압축한 Numbers 원본 예제 ZIP 다운로드 추가

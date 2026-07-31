@@ -903,7 +903,7 @@ function updateGo(){
     `생성하기 &mdash; ${sel.name.replace(/\.(numbers|xlsx)$/,'')}`;
 }
 function renderList(){
-  const q=document.getElementById('q').value.toLowerCase();
+  const q=(document.getElementById('q')?.value||'').toLowerCase();
   document.getElementById('list').innerHTML=sheets.filter(s=>s.name.toLowerCase().includes(q)).map(s=>
     `<div class="sheet ${sel&&sel.path===s.path?'sel':''}" onclick='pick(${JSON.stringify(s).replace(/'/g,"&#39;")})'>
       <span>${esc(s.name.replace(/\.(numbers|xlsx)$/,''))}</span><span class="d">${new Date(s.mtime*1000).toLocaleDateString('ko-KR')}</span></div>`).join('');

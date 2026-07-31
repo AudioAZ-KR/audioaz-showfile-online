@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: audioaz-showfile
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: SHOWFILE_ONLINE
+        value: "1"

@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""DM7 쇼파일 생성기 — 채널시트 스펙(JSON) → .dm7f
+2026-07-21 리버싱 결과 기반 (콘솔 실기 검증 완료).
+사용: python3 dm7_gen.py spec.json 출력경로.dm7f [베이스.dm7f]
+"""
+import zlib, re, uuid, struct, json, sys, os
+
+DCA_SLOTS = {'OnAir':1, 'inst':2, 'Sings':3, 'Drums':4, 'AMBI':12}
+COLOR_RE = re.compile(rb'(Blue|Orange|Red|Yellow|Green|Purple|Pink|White)\x00')
+
+
+def find_sections(data):
+    res = []
+    for m in re.finditer(b'#FILE', data):
+        h = m.start()
+        for i in range(h + 28, h + 120):
+            if data[i] == 0x78:
+                o = zlib.decompressobj()
+                try:
+                    o.decompress(data[i:])
+                    res.append((h, i, len(data) - i - len(o.unused_data)))
+                    break
+                except Exception:
+                    continue
+    return res
+
+
+def wname(raw, off, name, width=64):
+    nb = name.encode('utf-8')
+    assert len(nb) < width, f'name too long: {name}'
+    raw[off:off + width] = nb + b'\x00' * (width - len(nb))
+
+
+def patch_blob(raw, spec, is_current):
+    ms = [x.start() for x in re.finditer(b'STEREO', raw)]
+    if len(ms) != 120 or len({b - a for a, b in zip(ms, ms[1:])}) != 1:
+        return raw, False
+    raw = bytearray(raw)
+
+    # 채널명 (최대 12자 규칙은 스펙 작성 단계에서 보장)
+    for c in spec['channels']:
+        ch = c['ch']
+        assert len(c['name']) <= 12, f"ch{ch} 이름 12자 초과: {c['name']}"
+        wname(raw, ms[ch - 1] + 8, c['name'])
+
+    # 스테레오 링크: STEREO 라벨 직전 2바이트 03 80 / 03 01
+    for a, b in spec.get('pairs', []):
+        raw[ms[a - 1] - 2:ms[a - 1]] = b'\x03\x80'
+        raw[ms[b - 1] - 2:ms[b - 1]] = b'\x03\x01'
+
+    if is_current:
+        # DCA 어사인: u16 LE 마스크 @ 다음 레코드 STEREO -0x14, bit N = DCA N+1
+        # Current에만 기록 (콘솔도 씬에는 안 씀)
+        for c in spec['channels']:
+            mask = 0
+            for d in c.get('dca', []):
+                mask |= 1 << (DCA_SLOTS[d] - 1)
+            if mask:
+                ch = c['ch']
+                raw[ms[ch] - 0x14:ms[ch] - 0x12] = struct.pack('<H', mask)
+        # DCA 이름 테이블 (앵커 \x01OnAir, 레코드 0x58): AMBI 사용 시 DCA12 리네임 필수
+        loc = raw.find(b'\x01OnAir')
+        if loc >= 0:
+            for slot, nm in spec.get('dca_names', {}).items():
+                s = loc + (int(slot) - 1) * 0x58
+                raw[s + 1:s + 16] = nm.encode() + b'\x00' * (15 - len(nm.encode()))
+
+    # MIX 레코드: nST/M 마커, 이름 = 컬러 문자열 -0x40, 링크+PanLink = 이름 -3 (01 80 01 / 01 01 01)
+    marks = [m.start() for m in re.finditer(b'nST/M', raw) if m.start() > ms[-1]]
+    mixpos = {}
+    mx1 = raw.find(b'MX 1\x00', ms[-1])
+    if mx1 >= 0:
+        mixpos[1] = mx1
+    for i, mk in enumerate(marks[:47]):
+        c = COLOR_RE.search(raw, mk, mk + 0x300)
+        if c:
+            mixpos[i + 2] = c.start() - 0x40
+    for n, mx in spec.get('mixes', {}).items():
+        n = int(n)
+        if n in mixpos:
+            wname(raw, mixpos[n], mx['name'], 0x40)
+    for a, b in spec.get('mix_pairs', []):
+        if a in mixpos and b in mixpos:
+            raw[mixpos[a] - 3:mixpos[a]] = b'\x01\x80\x01'
+            raw[mixpos[b] - 3:mixpos[b]] = b'\x01\x01\x01'
+
+    # MATRIX: 앵커 \x01\x80\x01TOP(MTRX1), 고정 스트라이드 0x206
+    tl = raw.find(b'\x01\x80\x01TOP')
+    if tl < 0:
+        tl = raw.find(b'\x01\x80\x01Main')  # 이미 리네임된 베이스 대응
+    if tl >= 0:
+        base = tl + 3
+        for n, mt in spec.get('matrix', {}).items():
+            off = base + (int(n) - 1) * 0x206
+            wname(raw, off, mt['name'], 0x40)
+            if mt.get('mono'):
+                raw[off - 3:off] = b'\x00\x00\x00'
+            elif mt.get('link') == 'L':
+                raw[off - 3:off] = b'\x01\x80\x01'
+            elif mt.get('link') == 'R':
+                raw[off - 3:off] = b'\x01\x01\x01'
+    return bytes(raw), True
+
+
+def generate(spec_path, out_path, base_path=None):
+    spec = json.load(open(spec_path))
+    if base_path is None:
+        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'base', 'Reset.dm7f')
+    src = open(base_path, 'rb').read()
+    secs = find_sections(src)
+    tail = src[src.rfind(b'#END'):]
+    result = bytearray(src[:secs[0][0]])
+    result[0x38:0x48] = uuid.uuid4().bytes  # 헤더 UUID (체크섬 아님)
+    for h, p, plen in secs:
+        name = src[h + 12:h + 28].split(b'\x00')[0].decode()
+        header = bytearray(src[h:p])
+        payload = src[p:p + plen]
+        raw2, ok = patch_blob(zlib.decompress(payload), spec, name == 'Current')
+        if ok:
+            payload = zlib.compress(raw2, 1)  # 레벨 1 필수 (0x7801)
+            idx = bytes(header).find(struct.pack('>I', plen))
+            assert idx >= 0, 'size field not found'
+            header[idx:idx + 4] = struct.pack('>I', len(payload))
+        result += header
+        result += payload
+        result += b'\x00' * ((4 - len(result) % 4) % 4)  # 4바이트 정렬 필수
+    result += tail
+    open(out_path, 'wb').write(bytes(result))
+
+    # 자체 검증
+    chk = open(out_path, 'rb').read()
+    n_ok = 0
+    for h, p, plen in find_sections(chk):
+        raw = zlib.decompress(chk[p:p + plen])
+        ms = [x.start() for x in re.finditer(b'STEREO', raw)]
+        if len(ms) == 120:
+            for c in spec['channels']:
+                got = raw[ms[c['ch'] - 1] + 8:ms[c['ch'] - 1] + 8 + 64].split(b'\x00')[0].decode()
+                assert got == c['name'], (c['ch'], got, c['name'])
+            n_ok += 1
+        assert h % 4 == 0, 'section misaligned'
+    assert chk.rfind(b'#END') % 4 == 0
+    print(f'OK: {out_path} ({len(result)} bytes, {n_ok} channel sections verified)')
+
+
+if __name__ == '__main__':
+    generate(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)

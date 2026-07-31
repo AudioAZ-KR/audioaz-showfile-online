@@ -1,0 +1,1121 @@
+{
+ "built_from_files": 129,
+ "families": {
+  "1st vln": {
+   "count": 12,
+   "rep": "1st Vln"
+  },
+  "2nd vln": {
+   "count": 12,
+   "rep": "2nd Vln"
+  },
+  "a.g": {
+   "count": 2,
+   "rep": "A.G"
+  },
+  "ag": {
+   "count": 69,
+   "rep": "AG"
+  },
+  "alto saxo": {
+   "count": 3,
+   "rep": "Alto Saxo"
+  },
+  "amb": {
+   "count": 4,
+   "rep": "AMB"
+  },
+  "ambi": {
+   "count": 113,
+   "rep": "AMBI"
+  },
+  "ambi sus": {
+   "count": 2,
+   "rep": "AMBI Sus"
+  },
+  "asmr": {
+   "count": 6,
+   "rep": "ASMR"
+  },
+  "aux": {
+   "count": 4,
+   "rep": "Aux"
+  },
+  "bass": {
+   "count": 75,
+   "rep": "Bass"
+  },
+  "bass di": {
+   "count": 3,
+   "rep": "Bass Di"
+  },
+  "bass drum": {
+   "count": 2,
+   "rep": "Bass Drum"
+  },
+  "bass gt": {
+   "count": 2,
+   "rep": "Bass GT"
+  },
+  "bass mic": {
+   "count": 2,
+   "rep": "Bass Mic"
+  },
+  "bgm": {
+   "count": 7,
+   "rep": "BGM"
+  },
+  "bn": {
+   "count": 2,
+   "rep": "Bn"
+  },
+  "bong go": {
+   "count": 2,
+   "rep": "Bong go"
+  },
+  "bongo": {
+   "count": 3,
+   "rep": "Bongo"
+  },
+  "buk": {
+   "count": 4,
+   "rep": "Buk"
+  },
+  "cajon": {
+   "count": 3,
+   "rep": "Cajon"
+  },
+  "cd": {
+   "count": 2,
+   "rep": "CD"
+  },
+  "cello": {
+   "count": 2,
+   "rep": "Cello"
+  },
+  "cho": {
+   "count": 5,
+   "rep": "Cho"
+  },
+  "chorus": {
+   "count": 10,
+   "rep": "Chorus"
+  },
+  "chorus piano": {
+   "count": 5,
+   "rep": "Chorus Piano"
+  },
+  "chorus synth": {
+   "count": 5,
+   "rep": "Chorus Synth"
+  },
+  "chours synth": {
+   "count": 2,
+   "rep": "Chours Synth"
+  },
+  "cl": {
+   "count": 4,
+   "rep": "Cl"
+  },
+  "cla": {
+   "count": 5,
+   "rep": "Cla"
+  },
+  "click": {
+   "count": 22,
+   "rep": "Click"
+  },
+  "click?": {
+   "count": 2,
+   "rep": "Click?"
+  },
+  "com": {
+   "count": 2,
+   "rep": "Com"
+  },
+  "conga": {
+   "count": 4,
+   "rep": "Conga"
+  },
+  "congga": {
+   "count": 6,
+   "rep": "Congga"
+  },
+  "crash": {
+   "count": 2,
+   "rep": "Crash"
+  },
+  "d bass": {
+   "count": 3,
+   "rep": "D Bass"
+  },
+  "dbass": {
+   "count": 4,
+   "rep": "DBass"
+  },
+  "digico 2tr": {
+   "count": 2,
+   "rep": "Digico 2TR"
+  },
+  "drum": {
+   "count": 8,
+   "rep": "Drum"
+  },
+  "drum click": {
+   "count": 30,
+   "rep": "Drum Click"
+  },
+  "drums": {
+   "count": 11,
+   "rep": "Drums"
+  },
+  "e drum": {
+   "count": 2,
+   "rep": "E Drum"
+  },
+  "e-talk": {
+   "count": 2,
+   "rep": "E-Talk"
+  },
+  "e.g": {
+   "count": 3,
+   "rep": "E.G"
+  },
+  "ead": {
+   "count": 2,
+   "rep": "EAD"
+  },
+  "eg": {
+   "count": 55,
+   "rep": "EG"
+  },
+  "eg 1": {
+   "count": 2,
+   "rep": "EG 1"
+  },
+  "eg 2": {
+   "count": 2,
+   "rep": "EG 2"
+  },
+  "fl": {
+   "count": 4,
+   "rep": "Fl"
+  },
+  "flut": {
+   "count": 6,
+   "rep": "Flut"
+  },
+  "front solo": {
+   "count": 2,
+   "rep": "Front Solo"
+  },
+  "fx vocal": {
+   "count": 2,
+   "rep": "FX Vocal"
+  },
+  "fx1 rt": {
+   "count": 2,
+   "rep": "FX1 Rt"
+  },
+  "fx2 rt": {
+   "count": 2,
+   "rep": "FX2 Rt"
+  },
+  "g piano": {
+   "count": 3,
+   "rep": "G Piano"
+  },
+  "g.piano": {
+   "count": 3,
+   "rep": "G.Piano"
+  },
+  "g.piano h": {
+   "count": 3,
+   "rep": "G.Piano H"
+  },
+  "gaya": {
+   "count": 6,
+   "rep": "Gaya"
+  },
+  "gayageum": {
+   "count": 4,
+   "rep": "Gayageum"
+  },
+  "geomungo": {
+   "count": 4,
+   "rep": "Geomungo"
+  },
+  "glokenspiel": {
+   "count": 2,
+   "rep": "Glokenspiel"
+  },
+  "gong": {
+   "count": 2,
+   "rep": "Gong"
+  },
+  "gt": {
+   "count": 2,
+   "rep": "GT"
+  },
+  "gtr": {
+   "count": 17,
+   "rep": "GTR"
+  },
+  "guest": {
+   "count": 12,
+   "rep": "Guest"
+  },
+  "haegeum": {
+   "count": 2,
+   "rep": "HaeGeum"
+  },
+  "haf": {
+   "count": 4,
+   "rep": "Haf"
+  },
+  "hand": {
+   "count": 8,
+   "rep": "Hand"
+  },
+  "hand inst": {
+   "count": 2,
+   "rep": "Hand inst"
+  },
+  "hh": {
+   "count": 70,
+   "rep": "HH"
+  },
+  "hi hat": {
+   "count": 2,
+   "rep": "Hi Hat"
+  },
+  "i ag": {
+   "count": 4,
+   "rep": "I AG"
+  },
+  "i bass": {
+   "count": 2,
+   "rep": "I Bass"
+  },
+  "i eg": {
+   "count": 2,
+   "rep": "I EG"
+  },
+  "i mtr": {
+   "count": 2,
+   "rep": "I MTR"
+  },
+  "i mtr c": {
+   "count": 2,
+   "rep": "I MTR C"
+  },
+  "i piano": {
+   "count": 2,
+   "rep": "I Piano"
+  },
+  "inst": {
+   "count": 2,
+   "rep": "Inst"
+  },
+  "j ag": {
+   "count": 7,
+   "rep": "J AG"
+  },
+  "j bass": {
+   "count": 3,
+   "rep": "J Bass"
+  },
+  "j chorus": {
+   "count": 2,
+   "rep": "J Chorus (Synth)"
+  },
+  "j gtr": {
+   "count": 2,
+   "rep": "J GTR"
+  },
+  "j mtr": {
+   "count": 2,
+   "rep": "J MTR"
+  },
+  "j mtr click": {
+   "count": 2,
+   "rep": "J MTR Click"
+  },
+  "j pad": {
+   "count": 2,
+   "rep": "J Pad"
+  },
+  "j piano": {
+   "count": 2,
+   "rep": "J Piano(Nord)"
+  },
+  "j synth": {
+   "count": 2,
+   "rep": "J Synth(Juno)"
+  },
+  "jang": {
+   "count": 2,
+   "rep": "Jang"
+  },
+  "jang gu": {
+   "count": 4,
+   "rep": "Jang gu"
+  },
+  "key": {
+   "count": 71,
+   "rep": "Key"
+  },
+  "key 1": {
+   "count": 4,
+   "rep": "Key 1"
+  },
+  "key 2": {
+   "count": 4,
+   "rep": "Key 2"
+  },
+  "key1": {
+   "count": 4,
+   "rep": "Key1"
+  },
+  "key2": {
+   "count": 4,
+   "rep": "Key2"
+  },
+  "kick": {
+   "count": 39,
+   "rep": "Kick"
+  },
+  "kick in": {
+   "count": 26,
+   "rep": "Kick in"
+  },
+  "kick out": {
+   "count": 32,
+   "rep": "Kick out"
+  },
+  "kick sub": {
+   "count": 7,
+   "rep": "Kick Sub"
+  },
+  "l ajaeng": {
+   "count": 2,
+   "rep": "L Ajaeng"
+  },
+  "lead tb": {
+   "count": 7,
+   "rep": "Lead TB"
+  },
+  "leader": {
+   "count": 8,
+   "rep": "Leader"
+  },
+  "leader tb": {
+   "count": 2,
+   "rep": "Leader TB"
+  },
+  "m.key": {
+   "count": 2,
+   "rep": "M.Key"
+  },
+  "mac": {
+   "count": 6,
+   "rep": "Mac"
+  },
+  "macbook": {
+   "count": 4,
+   "rep": "Macbook"
+  },
+  "main": {
+   "count": 4,
+   "rep": "Main"
+  },
+  "mc": {
+   "count": 53,
+   "rep": "MC"
+  },
+  "mc/pastor": {
+   "count": 2,
+   "rep": "MC/Pastor"
+  },
+  "modx": {
+   "count": 4,
+   "rep": "MODX"
+  },
+  "mr": {
+   "count": 3,
+   "rep": "MR"
+  },
+  "mtr": {
+   "count": 51,
+   "rep": "MTR"
+  },
+  "mtr call": {
+   "count": 3,
+   "rep": "MTR Call"
+  },
+  "mtr cho": {
+   "count": 2,
+   "rep": "MTR Cho"
+  },
+  "mtr click": {
+   "count": 26,
+   "rep": "MTR Click"
+  },
+  "mtr inst": {
+   "count": 2,
+   "rep": "MTR inst"
+  },
+  "ob": {
+   "count": 4,
+   "rep": "Ob"
+  },
+  "oh": {
+   "count": 44,
+   "rep": "OH"
+  },
+  "oh h": {
+   "count": 13,
+   "rep": "OH H"
+  },
+  "oh hh": {
+   "count": 45,
+   "rep": "OH HH"
+  },
+  "oh ride": {
+   "count": 45,
+   "rep": "OH Ride"
+  },
+  "p oh": {
+   "count": 6,
+   "rep": "P OH"
+  },
+  "pad": {
+   "count": 11,
+   "rep": "PAD"
+  },
+  "pastor": {
+   "count": 18,
+   "rep": "Pastor"
+  },
+  "per": {
+   "count": 8,
+   "rep": "Per"
+  },
+  "per oh": {
+   "count": 4,
+   "rep": "Per OH"
+  },
+  "piano": {
+   "count": 79,
+   "rep": "Piano"
+  },
+  "piano h": {
+   "count": 8,
+   "rep": "Piano H"
+  },
+  "piano tb": {
+   "count": 8,
+   "rep": "Piano TB"
+  },
+  "piano xy": {
+   "count": 3,
+   "rep": "Piano XY"
+  },
+  "pin": {
+   "count": 6,
+   "rep": "Pin"
+  },
+  "rear ambi": {
+   "count": 4,
+   "rep": "Rear AMBI"
+  },
+  "rev 1 rt": {
+   "count": 2,
+   "rep": "Rev 1 Rt"
+  },
+  "ride": {
+   "count": 8,
+   "rep": "Ride"
+  },
+  "roland": {
+   "count": 2,
+   "rep": "Roland"
+  },
+  "roland pad": {
+   "count": 2,
+   "rep": "Roland Pad"
+  },
+  "s ajaeng": {
+   "count": 2,
+   "rep": "S Ajaeng"
+  },
+  "s.key": {
+   "count": 2,
+   "rep": "S.Key"
+  },
+  "saenghwang": {
+   "count": 2,
+   "rep": "Saenghwang"
+  },
+  "saxo": {
+   "count": 2,
+   "rep": "Saxo"
+  },
+  "saxophone": {
+   "count": 5,
+   "rep": "Saxophone"
+  },
+  "sing": {
+   "count": 64,
+   "rep": "Sing"
+  },
+  "slate click": {
+   "count": 2,
+   "rep": "Slate Click"
+  },
+  "snare": {
+   "count": 17,
+   "rep": "Snare"
+  },
+  "snare b": {
+   "count": 8,
+   "rep": "Snare B"
+  },
+  "snare bot": {
+   "count": 48,
+   "rep": "Snare Bot"
+  },
+  "snare con": {
+   "count": 2,
+   "rep": "Snare Con"
+  },
+  "snare t": {
+   "count": 8,
+   "rep": "Snare T"
+  },
+  "snare top": {
+   "count": 51,
+   "rep": "Snare Top"
+  },
+  "solo": {
+   "count": 2,
+   "rep": "Solo"
+  },
+  "sousa": {
+   "count": 3,
+   "rep": "Sousa"
+  },
+  "sov": {
+   "count": 19,
+   "rep": "SOV"
+  },
+  "spd": {
+   "count": 15,
+   "rep": "SPD"
+  },
+  "speech": {
+   "count": 2,
+   "rep": "Speech"
+  },
+  "stage ambi": {
+   "count": 6,
+   "rep": "Stage AMBI"
+  },
+  "stare bot": {
+   "count": 2,
+   "rep": "Stare Bot"
+  },
+  "sub kick": {
+   "count": 2,
+   "rep": "Sub KIck"
+  },
+  "synth": {
+   "count": 15,
+   "rep": "Synth"
+  },
+  "synth tb": {
+   "count": 5,
+   "rep": "Synth TB"
+  },
+  "taepyeongso": {
+   "count": 2,
+   "rep": "Taepyeongso"
+  },
+  "talk": {
+   "count": 9,
+   "rep": "Talk"
+  },
+  "talkback": {
+   "count": 3,
+   "rep": "TalkBack"
+  },
+  "tb": {
+   "count": 23,
+   "rep": "TB"
+  },
+  "tb bass": {
+   "count": 2,
+   "rep": "TB Bass"
+  },
+  "tb foh": {
+   "count": 5,
+   "rep": "TB FOH"
+  },
+  "tb lead": {
+   "count": 4,
+   "rep": "TB Lead"
+  },
+  "tb master": {
+   "count": 2,
+   "rep": "TB Master"
+  },
+  "tb piano": {
+   "count": 8,
+   "rep": "TB Piano"
+  },
+  "tb synth": {
+   "count": 8,
+   "rep": "TB Synth"
+  },
+  "tb wl": {
+   "count": 5,
+   "rep": "TB WL"
+  },
+  "tenor saxo": {
+   "count": 2,
+   "rep": "Tenor Saxo"
+  },
+  "tim": {
+   "count": 8,
+   "rep": "Tim"
+  },
+  "tom": {
+   "count": 194,
+   "rep": "Tom"
+  },
+  "tp": {
+   "count": 12,
+   "rep": "Tp"
+  },
+  "tr": {
+   "count": 2,
+   "rep": "TR"
+  },
+  "trumpet": {
+   "count": 2,
+   "rep": "Trumpet"
+  },
+  "up l solo": {
+   "count": 4,
+   "rep": "UP L Solo"
+  },
+  "up r solo": {
+   "count": 4,
+   "rep": "UP R Solo"
+  },
+  "vc": {
+   "count": 20,
+   "rep": "Vc"
+  },
+  "vibraphone": {
+   "count": 4,
+   "rep": "Vibraphone"
+  },
+  "vla": {
+   "count": 11,
+   "rep": "Vla"
+  },
+  "vln": {
+   "count": 15,
+   "rep": "Vln"
+  },
+  "vocal": {
+   "count": 2,
+   "rep": "Vocal"
+  },
+  "vox": {
+   "count": 30,
+   "rep": "Vox"
+  },
+  "wind chime": {
+   "count": 2,
+   "rep": "Wind Chime"
+  },
+  "wl": {
+   "count": 190,
+   "rep": "WL"
+  },
+  "wl ag": {
+   "count": 5,
+   "rep": "WL AG"
+  },
+  "ww": {
+   "count": 3,
+   "rep": "WW"
+  },
+  "y ag": {
+   "count": 3,
+   "rep": "Y AG"
+  },
+  "y mtr": {
+   "count": 2,
+   "rep": "Y MTR"
+  },
+  "yang guem": {
+   "count": 2,
+   "rep": "Yang Guem"
+  },
+  "가야금": {
+   "count": 26,
+   "rep": "가야금"
+  },
+  "강권순 vox": {
+   "count": 2,
+   "rep": "강권순 Vox"
+  },
+  "거문고": {
+   "count": 19,
+   "rep": "거문고"
+  },
+  "글로켄슈필": {
+   "count": 4,
+   "rep": "글로켄슈필"
+  },
+  "기도 용사": {
+   "count": 2,
+   "rep": "기도 용사"
+  },
+  "기도용사": {
+   "count": 5,
+   "rep": "기도용사(MC)"
+  },
+  "기도용사 / mc": {
+   "count": 4,
+   "rep": "기도용사 / MC"
+  },
+  "김도연": {
+   "count": 2,
+   "rep": "김도연"
+  },
+  "김민지 vox": {
+   "count": 2,
+   "rep": "김민지 Vox"
+  },
+  "김윤주": {
+   "count": 2,
+   "rep": "김윤주(키보드)"
+  },
+  "다비치": {
+   "count": 2,
+   "rep": "다비치"
+  },
+  "대금": {
+   "count": 24,
+   "rep": "대금"
+  },
+  "대아쟁": {
+   "count": 3,
+   "rep": "대아쟁"
+  },
+  "리더": {
+   "count": 3,
+   "rep": "리더"
+  },
+  "뮤트 징": {
+   "count": 2,
+   "rep": "뮤트 징"
+  },
+  "민우": {
+   "count": 3,
+   "rep": "민우"
+  },
+  "바이올린": {
+   "count": 2,
+   "rep": "바이올린"
+  },
+  "박세진": {
+   "count": 2,
+   "rep": "박세진(멜로디언)"
+  },
+  "박진하 vox": {
+   "count": 2,
+   "rep": "박진하 Vox"
+  },
+  "반도네온": {
+   "count": 2,
+   "rep": "반도네온"
+  },
+  "방민우": {
+   "count": 2,
+   "rep": "방민우"
+  },
+  "베이스": {
+   "count": 2,
+   "rep": "베이스"
+  },
+  "베이스 드럼": {
+   "count": 2,
+   "rep": "베이스 드럼"
+  },
+  "보컬": {
+   "count": 12,
+   "rep": "보컬"
+  },
+  "봉고": {
+   "count": 2,
+   "rep": "봉고"
+  },
+  "사물": {
+   "count": 10,
+   "rep": "사물"
+  },
+  "사회자": {
+   "count": 3,
+   "rep": "사회자"
+  },
+  "사회자 핸드": {
+   "count": 4,
+   "rep": "사회자 핸드"
+  },
+  "생황": {
+   "count": 5,
+   "rep": "생황"
+  },
+  "설교자": {
+   "count": 7,
+   "rep": "설교자"
+  },
+  "성악": {
+   "count": 3,
+   "rep": "성악"
+  },
+  "소금": {
+   "count": 7,
+   "rep": "소금"
+  },
+  "소리": {
+   "count": 3,
+   "rep": "소리"
+  },
+  "소아쟁": {
+   "count": 3,
+   "rep": "소아쟁"
+  },
+  "송지윤": {
+   "count": 2,
+   "rep": "송지윤"
+  },
+  "스피치": {
+   "count": 4,
+   "rep": "스피치"
+  },
+  "심벌": {
+   "count": 4,
+   "rep": "심벌"
+  },
+  "심사위원 핀": {
+   "count": 10,
+   "rep": "심사위원 핀"
+  },
+  "심사위원 핸드": {
+   "count": 10,
+   "rep": "심사위원 핸드"
+  },
+  "심현경 vox": {
+   "count": 2,
+   "rep": "심현경 Vox"
+  },
+  "싱어": {
+   "count": 36,
+   "rep": "싱어"
+  },
+  "아이돌 핸드": {
+   "count": 4,
+   "rep": "아이돌 핸드"
+  },
+  "아쟁": {
+   "count": 21,
+   "rep": "아쟁"
+  },
+  "아코디언": {
+   "count": 3,
+   "rep": "아코디언"
+  },
+  "양금": {
+   "count": 30,
+   "rep": "양금"
+  },
+  "연출": {
+   "count": 9,
+   "rep": "연출"
+  },
+  "예비": {
+   "count": 27,
+   "rep": "예비"
+  },
+  "용운": {
+   "count": 3,
+   "rep": "용운"
+  },
+  "원일": {
+   "count": 3,
+   "rep": "원일"
+  },
+  "윈드차임": {
+   "count": 2,
+   "rep": "윈드차임"
+  },
+  "음향감독": {
+   "count": 2,
+   "rep": "음향감독"
+  },
+  "이예진": {
+   "count": 2,
+   "rep": "이예진"
+  },
+  "인도자": {
+   "count": 9,
+   "rep": "인도자"
+  },
+  "장고": {
+   "count": 2,
+   "rep": "장고"
+  },
+  "장구": {
+   "count": 26,
+   "rep": "장구"
+  },
+  "장구 1": {
+   "count": 4,
+   "rep": "장구 1"
+  },
+  "장구 2": {
+   "count": 4,
+   "rep": "장구 2"
+  },
+  "장구 궁": {
+   "count": 2,
+   "rep": "장구 궁"
+  },
+  "장구 채": {
+   "count": 2,
+   "rep": "장구 채"
+  },
+  "장태평": {
+   "count": 2,
+   "rep": "장태평"
+  },
+  "전통양금": {
+   "count": 2,
+   "rep": "전통양금"
+  },
+  "젬배": {
+   "count": 2,
+   "rep": "젬배"
+  },
+  "조윤영 vox": {
+   "count": 2,
+   "rep": "조윤영 Vox"
+  },
+  "주람": {
+   "count": 3,
+   "rep": "주람"
+  },
+  "지박": {
+   "count": 2,
+   "rep": "지박"
+  },
+  "지혜": {
+   "count": 3,
+   "rep": "지혜"
+  },
+  "징걸이 징": {
+   "count": 2,
+   "rep": "징걸이 징"
+  },
+  "참가자 핸드": {
+   "count": 11,
+   "rep": "참가자 핸드"
+  },
+  "철 가야금": {
+   "count": 2,
+   "rep": "철 가야금"
+  },
+  "코러스": {
+   "count": 4,
+   "rep": "코러스"
+  },
+  "콘트라베이스": {
+   "count": 2,
+   "rep": "콘트라베이스"
+  },
+  "콰이어": {
+   "count": 4,
+   "rep": "콰이어"
+  },
+  "타악": {
+   "count": 22,
+   "rep": "타악"
+  },
+  "팀파니": {
+   "count": 2,
+   "rep": "팀파니"
+  },
+  "판소리": {
+   "count": 2,
+   "rep": "판소리"
+  },
+  "퍼커션": {
+   "count": 2,
+   "rep": "퍼커션"
+  },
+  "포레스텔라": {
+   "count": 4,
+   "rep": "포레스텔라"
+  },
+  "프로프리젠터": {
+   "count": 2,
+   "rep": "프로프리젠터"
+  },
+  "플로어": {
+   "count": 2,
+   "rep": "플로어"
+  },
+  "피리": {
+   "count": 26,
+   "rep": "피리"
+  },
+  "피리/ 생황/ 태평소": {
+   "count": 2,
+   "rep": "피리/ 생황/ 태평소"
+  },
+  "하지아 vox": {
+   "count": 2,
+   "rep": "하지아 Vox"
+  },
+  "함영선": {
+   "count": 2,
+   "rep": "함영선"
+  },
+  "합창": {
+   "count": 16,
+   "rep": "합창"
+  },
+  "해금": {
+   "count": 29,
+   "rep": "해금"
+  },
+  "해설사": {
+   "count": 2,
+   "rep": "해설사"
+  },
+  "현 가야금": {
+   "count": 4,
+   "rep": "현 가야금"
+  },
+  "현지혜": {
+   "count": 2,
+   "rep": "현지혜"
+  }
+ }
+}

@@ -970,7 +970,7 @@ async function load(){
   const r=await (await fetch('/api/state')).json();
   sheets=r.sheets;setDirs(r.config);renderList();renderOpts();updateGo();
   if(r.online){
-    document.querySelector('.searchrow').innerHTML='<button class="btn" style="width:100%;padding:14px;font-weight:700" onclick="document.getElementById(\\'uploadInput\\').click()">채널시트 업로드 (.numbers / .xlsx)</button>';
+    document.querySelector('.searchrow').innerHTML=`<button class="btn" style="width:100%;padding:14px;font-weight:700" onclick="document.getElementById('uploadInput').click()">채널시트 업로드 (.numbers / .xlsx)</button>`;
     document.querySelectorAll('.folderline').forEach(el=>el.style.display='none');
   }
   if(r.lan){document.getElementById('lanchk').checked=r.lan.on;

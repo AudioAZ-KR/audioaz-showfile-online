@@ -28,6 +28,19 @@ from run_pipeline import next_version
 
 FROZEN = getattr(sys, 'frozen', False)
 RES = getattr(sys, '_MEIPASS', HERE)          # 번들 리소스 (동결 시)
+
+
+def _app_version():
+    """Return the release version shared by the UI and downloads."""
+    try:
+        with open(os.path.join(RES, 'VERSION'), encoding='utf-8') as f:
+            return f.read().strip() or '0.1.0'
+    except OSError:
+        return '0.1.0'
+
+
+APP_VERSION = _app_version()
+RELEASE_CHANNEL = 'BETA'
 if FROZEN:
     _cfg_dir = os.path.expanduser('~/Library/Application Support/쇼파일 생성기')
     os.makedirs(_cfg_dir, exist_ok=True)
@@ -535,7 +548,9 @@ class H(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == '/':
-            b = HTML.encode()
+            b = (HTML.replace('{{APP_VERSION}}', APP_VERSION)
+                     .replace('{{RELEASE_CHANNEL}}', RELEASE_CHANNEL)
+                     .encode())
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.send_header('Content-Length', str(len(b)))
@@ -565,7 +580,7 @@ class H(BaseHTTPRequestHandler):
             if not os.path.isfile(OFFLINE_APP_PATH):
                 self._json({'error': '오프라인 앱 파일을 찾을 수 없습니다.'}, 404)
                 return
-            filename = os.path.basename(OFFLINE_APP_PATH)
+            filename = f'쇼파일_생성기_오프라인_v{APP_VERSION}_AppleSilicon.zip'
             self.send_response(200)
             self.send_header('Content-Type', 'application/zip')
             self.send_header('Content-Length', str(os.path.getsize(OFFLINE_APP_PATH)))
@@ -575,6 +590,9 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             with open(OFFLINE_APP_PATH, 'rb') as f:
                 shutil.copyfileobj(f, self.wfile)
+        elif self.path == '/api/version':
+            self._json({'version': APP_VERSION,
+                        'channel': RELEASE_CHANNEL.lower()})
         elif self.path == '/api/state':
             c = config()
             ip = lan_ip() if c.get('lan_mode') else None
@@ -673,7 +691,7 @@ class H(BaseHTTPRequestHandler):
 HTML = r'''<!DOCTYPE html>
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>쇼파일 생성기</title>
+<title>쇼파일 생성기 ({{RELEASE_CHANNEL}} v{{APP_VERSION}})</title>
 <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyBpZD0i66Gc6rOgIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0ODgiIGhlaWdodD0iNTU1IiB2aWV3Qm94PSIwIDAgNDg4IDU1NSI+IDxwYXRoIGlkPSLrqqjslpFfMSIgZGF0YS1uYW1lPSLrqqjslpEgMSIgZmlsbD0iIzE4NzdmMiIgZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNMjUzLjc3NSwzLjdjMzUuNCwyMC40NTQsMTg5LjczNiwxMDkuODMyLDIyNC4wNTksMTI5LjY2Nyw0LjUxMywzLjEyLDguMSw1LjIzMiw4Ljk0MywxNC42N1Y0MDMuOWMtMC4xMjQsOS44MjgtMi44NTcsMTUuNzE0LTExLjE3NywyMS4xTDI1Ny4yNzksNTUxLjE1N2MtOS45Myw1LjI1My0xNy44MzUsMy44Mi0yNi4yMTMtLjE3M0wxMC41NjksNDIzLjgyNkM0LjgsNDIwLjU4MywxLjIzMiw0MTYuMiwxLjQsNDA1LjkzVjE0NS40MjRhMTAuMzYyLDEwLjM2MiwwLDAsMSw1LjQ2NS05LjU2OUMzNS44MjcsMTE5LjA5MiwxOTkuNjMxLDIzLjg4NCwyMzUuODksMy4yMDcsMjQwLjc3NCwwLjgzNywyNDYuMjM1LjcsMjUzLjc3NSwzLjdaIi8+IDxwYXRoIGlkPSJBX+uzteyCrCIgZGF0YS1uYW1lPSJBIOuzteyCrCIgZmlsbD0iI2ZmZiIgZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNNTQuMDU5LDE0Mi44MWMyNC40NS0xNC40NTIsMTQxLjczNS04My41NjEsMTc3LjgxNC0xMDQuODg3LDUuMTIzLTMuNzc0LDE0LjA4LTMuNjk0LDIwLjA0OS0uMDdMNDM1LjEsMTQ0LjEwOGM2LjU0LDMuNjg0LDIuODU2LDUuODc5LTEuMjYxLDguMDE3bC0zNi44MjUsMjEuMzMxYy0yLjgzNywxLjczNC01LjgyLDMuMTQ5LTExLjU4My4xNTYtMTUuNjk0LTkuMjMzLTY3Ljk5LTM5Ljk0OC02Ny45OS0zOS45NDhsLTk4Ljc1Miw1OC4zNzEsNjYuNzg0LDM5LjI4OWM0LjA2NywyLjQsMy43ODIsNi42LTIuMDMzLDkuMTkzbC0zMS43LDE4LjczOGMtNy43NjQsNS4yNDktMTMuNiwyLjU4NS0xNy43NzQuMDQyLTM0LjA2OC0xOS44ODQtMTU1LjQxNy05MC43MTMtMTc5LjktMTA1LjA2MUM0OS41MDcsMTUxLjgzNSw1MCwxNDUuMTgsNTQuMDU5LDE0Mi44MVptOTAuMDYsNS45NSw5Ny43NDQtNTguMzcxLDM1LjI2OCwyMi4xNDEtOTcuNzQ0LDU3LjM2NFoiLz4gPHBhdGggaWQ9IkFf67O17IKsXzIiIGRhdGEtbmFtZT0iQSDrs7XsgqwgMiIgZmlsbD0iI2ZmZiIgZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNNDMuMDQsMTgxLjk1MmMzNy45NzksMjEuNjU1LDE1MS44Miw4Ni43LDE3OS40MzYsMTAyLjQ0OGExNS40MTUsMTUuNDE1LDAsMCwxLDcuNiwxMy40MzljLTAuMjkyLDM3LjExNS0xLjM3OSwxNzUuNi0xLjY2NywyMTIuMjQ1LTAuMDk0LDcuMzY3LTUuMjM2LDUuODc1LTguMTcxLDQuMjI3bC0zNi4wNzUtMjAuOTkzYy0zLjQzMS0yLjA2Ny01Ljc0LTMuOTgyLTYuMDYxLTkuMTU4LDAuMjY1LTE4Ljk1NSwxLjExNC03OS42NTQsMS4xMTQtNzkuNjU0TDc5LjU4NCwzNDcuN1M3OC43MSw0MDAsNzguNCw0MjIuMDE1YzAuMTYsNS4yNy0uMjM5LDEwLjIwOC01LjUzNiw3Ljc3TDM0LjYxNSw0MDcuOTc0Yy0zLTIuMDMyLTYuMDY0LTQuOTE4LTUuOTY1LTEwLjgzNiwwLjMyOS0zMi42NzksMS42NTQtMTY0LjQ3OSwyLjA5Mi0yMDguMDU1QzMwLjQzNCwxODMuNiwzNC41MzEsMTc2LjI3LDQzLjA0LDE4MS45NTJabTM3LjIzOCw3OS42MzEsOTkuMTMzLDU1LjkzNi0xLjc4Miw0MS41NTdMNzkuMzcsMzAyLjY0MloiLz4gPHBhdGggaWQ9Ilpf67O17IKsIiBkYXRhLW5hbWU9Ilog67O17IKsIiBmaWxsPSIjZmZmIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0yNjMuNjYsMjg0LjA1N0w0NTAuMDgsMTcyLjcyYzIuMTc5LTEuMTM1LDYuNzIzLS40MTQsNi4zOTIsNS4zNjMsMCwxNi4wNjcuMDI0LDQ5LjE3NiwwLjAyNCw0OS4xNzZsLTEyMC45MiwxODguMkw0NDguOTMsMzQ3LjkwOWMyLjEtMS4zLDYuMzEtMi43NjcsNi41NTksMy4xdjQwLjUyMmMwLjEsNS41MDctLjUyOCw5LjUxMy04LjAwNywxNS42QzQxNS4yLDQyNi4zNiwyOTQuNzkzLDQ5OC4wNDUsMjYzLjIxNCw1MTYuOTA1Yy03LjY2NSwzLjUtOC42MTQtLjk5NC04LjQ0Ni0zLjk3NSwwLTE1LjkzMy4xOTQtNDkuMTY3LDAuMTk0LTQ5LjE2N0wzNzYuODksMjc0LjU2LDI2Mi41NzgsMzQyLjEwOWMtNS43MDYsMi4yODgtNi42MDgtMi02LjYwOC00LjI2MVYyOTguMjM3QzI1NS45NywyOTIuNDE4LDI1NS4yNzcsMjg4LjUzMywyNjMuNjYsMjg0LjA1N1oiLz4gPC9zdmc+IA==">
 <style>
 :root{--bg:#EDF2FA;--card:#ffffff;--card2:#F1F6FD;--line:#DCE6F5;--tx:#0C2244;--tx2:#5B6C86;
@@ -689,7 +707,10 @@ body{background:var(--bg);color:var(--tx);font:15px/1.6 -apple-system,"Apple SD 
 header{display:flex;align-items:center;gap:16px;margin-bottom:28px;padding:22px 24px;border-radius:20px;background:radial-gradient(circle at 82% 0,rgba(77,150,245,.42),transparent 32%),linear-gradient(135deg,#07172B,#0C2852 52%,#0D58AE);box-shadow:0 14px 36px rgba(12,48,100,.28)}
 .logo{width:52px;height:52px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 18px rgba(24,119,242,.5)}
 .logo svg{width:32px;height:auto;display:block}
-h1{font-size:21px;font-weight:800;color:#fff}
+h1{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:21px;font-weight:800;color:#fff}
+.beta-badge,.version-badge{display:inline-flex;align-items:center;height:20px;border-radius:6px;padding:0 7px;font:850 10px/1 ui-monospace,SFMono-Regular,monospace;letter-spacing:.06em}
+.beta-badge{background:#F04464;color:#fff;box-shadow:0 3px 10px rgba(240,68,100,.35)}
+.version-badge{border:1px solid rgba(255,255,255,.48);background:rgba(5,20,42,.3);color:#DCEBFF}
 .sub{font-size:13px;color:#B9CDEB}
 .headcopy{flex:1;min-width:0}
 .headtools{display:flex;align-items:center;gap:9px;margin-left:auto}
@@ -796,7 +817,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
 </style></head><body><div class="wrap">
 <header>
   <div class="logo"><svg id="로고" xmlns="http://www.w3.org/2000/svg" width="488" height="555" viewBox="0 0 488 555"> <path id="모양_1" data-name="모양 1" fill="#1877f2" fill-rule="evenodd" d="M253.775,3.7c35.4,20.454,189.736,109.832,224.059,129.667,4.513,3.12,8.1,5.232,8.943,14.67V403.9c-0.124,9.828-2.857,15.714-11.177,21.1L257.279,551.157c-9.93,5.253-17.835,3.82-26.213-.173L10.569,423.826C4.8,420.583,1.232,416.2,1.4,405.93V145.424a10.362,10.362,0,0,1,5.465-9.569C35.827,119.092,199.631,23.884,235.89,3.207,240.774,0.837,246.235.7,253.775,3.7Z"/> <path id="A_복사" data-name="A 복사" fill="#fff" fill-rule="evenodd" d="M54.059,142.81c24.45-14.452,141.735-83.561,177.814-104.887,5.123-3.774,14.08-3.694,20.049-.07L435.1,144.108c6.54,3.684,2.856,5.879-1.261,8.017l-36.825,21.331c-2.837,1.734-5.82,3.149-11.583.156-15.694-9.233-67.99-39.948-67.99-39.948l-98.752,58.371,66.784,39.289c4.067,2.4,3.782,6.6-2.033,9.193l-31.7,18.738c-7.764,5.249-13.6,2.585-17.774.042-34.068-19.884-155.417-90.713-179.9-105.061C49.507,151.835,50,145.18,54.059,142.81Zm90.06,5.95,97.744-58.371,35.268,22.141-97.744,57.364Z"/> <path id="A_복사_2" data-name="A 복사 2" fill="#fff" fill-rule="evenodd" d="M43.04,181.952c37.979,21.655,151.82,86.7,179.436,102.448a15.415,15.415,0,0,1,7.6,13.439c-0.292,37.115-1.379,175.6-1.667,212.245-0.094,7.367-5.236,5.875-8.171,4.227l-36.075-20.993c-3.431-2.067-5.74-3.982-6.061-9.158,0.265-18.955,1.114-79.654,1.114-79.654L79.584,347.7S78.71,400,78.4,422.015c0.16,5.27-.239,10.208-5.536,7.77L34.615,407.974c-3-2.032-6.064-4.918-5.965-10.836,0.329-32.679,1.654-164.479,2.092-208.055C30.434,183.6,34.531,176.27,43.04,181.952Zm37.238,79.631,99.133,55.936-1.782,41.557L79.37,302.642Z"/> <path id="Z_복사" data-name="Z 복사" fill="#fff" fill-rule="evenodd" d="M263.66,284.057L450.08,172.72c2.179-1.135,6.723-.414,6.392,5.363,0,16.067.024,49.176,0.024,49.176l-120.92,188.2L448.93,347.909c2.1-1.3,6.31-2.767,6.559,3.1v40.522c0.1,5.507-.528,9.513-8.007,15.6C415.2,426.36,294.793,498.045,263.214,516.905c-7.665,3.5-8.614-.994-8.446-3.975,0-15.933.194-49.167,0.194-49.167L376.89,274.56,262.578,342.109c-5.706,2.288-6.608-2-6.608-4.261V298.237C255.97,292.418,255.277,288.533,263.66,284.057Z"/> </svg> </div>
-  <div class="headcopy"><h1>쇼파일 생성기</h1><div class="sub">AudioAZ &middot; 채널시트 &rarr; DM7 &middot; KLANG &middot; SuperRack</div></div>
+  <div class="headcopy"><h1>쇼파일 생성기 <span class="beta-badge">{{RELEASE_CHANNEL}}</span><span class="version-badge">v{{APP_VERSION}}</span></h1><div class="sub">AudioAZ &middot; 채널시트 &rarr; DM7 &middot; KLANG &middot; SuperRack</div></div>
   <div class="headtools">
     <button class="templatebtn" onclick="saveTemplate()"><span class="ico">&#11015;</span><span>채널시트 템플릿 다운받기</span><span class="filetype">XLSX</span></button>
     <a class="offlinebtn" href="/download/offline"><span>&#128187;</span><span>오프라인 버전 다운로드</span><span class="os">MAC</span></a>

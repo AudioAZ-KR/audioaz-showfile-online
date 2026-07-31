@@ -37,6 +37,7 @@ else:
 VOCAB_PATH = os.path.join(RES, 'naming_vocab.json')
 SPRK_BASE = os.path.join(RES, 'base', 'sprk_base.sprk')
 TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트 템플릿.numbers')
+ONLINE_TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트_템플릿.xlsx')
 PRESETS = os.path.expanduser('~/Library/Containers/com.klang.klangapp2/Data/Library/KLANGtechnologies/Presets')
 PORT = int(os.environ.get('PORT', '8787'))
 STAGE = '/tmp/showfile_out'   # 로컬 스테이징 — iCloud가 느려도 생성은 즉시 완료
@@ -540,20 +541,24 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b)
         elif self.path == '/download/template':
-            if not os.path.isfile(TEMPLATE_PATH):
+            template_path = ONLINE_TEMPLATE_PATH if ONLINE else TEMPLATE_PATH
+            if not os.path.isfile(template_path):
                 self._json({'error': '채널시트 템플릿 파일을 찾을 수 없습니다.'}, 404)
                 return
-            filename = os.path.basename(TEMPLATE_PATH)
-            size = os.path.getsize(TEMPLATE_PATH)
+            filename = os.path.basename(template_path)
+            size = os.path.getsize(template_path)
             self.send_response(200)
-            self.send_header('Content-Type', 'application/vnd.apple.numbers')
+            content_type = ('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                            if filename.lower().endswith('.xlsx')
+                            else 'application/vnd.apple.numbers')
+            self.send_header('Content-Type', content_type)
             self.send_header('Content-Length', str(size))
             self.send_header(
                 'Content-Disposition',
                 f"attachment; filename*=UTF-8''{quote(filename)}")
             self.send_header('Cache-Control', 'no-store')
             self.end_headers()
-            with open(TEMPLATE_PATH, 'rb') as f:
+            with open(template_path, 'rb') as f:
                 shutil.copyfileobj(f, self.wfile)
         elif self.path == '/api/state':
             c = config()

@@ -1013,6 +1013,11 @@ function showToast(msg){
   clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.classList.remove('show'),2600);
 }
 async function saveTemplate(){
+  if(document.querySelector('.searchrow button')?.textContent.includes('채널시트 업로드')){
+    window.location.href='/download/template';
+    showToast('채널시트 템플릿 다운로드를 시작합니다.');
+    return;
+  }
   try{
     const r=await (await fetch('/api/download_template',{method:'POST',body:'{}'})).json();
     if(r.error)throw new Error(r.error);

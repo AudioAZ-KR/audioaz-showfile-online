@@ -677,9 +677,10 @@ h1{font-size:21px;font-weight:800;color:#fff}
 .sub{font-size:13px;color:#B9CDEB}
 .headcopy{flex:1;min-width:0}
 .headtools{display:flex;align-items:center;gap:9px;margin-left:auto}
-.templatebtn{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:11px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.3);color:#fff;font:700 12px/1 -apple-system,"Apple SD Gothic Neo",sans-serif;text-decoration:none;white-space:nowrap;transition:.15s;cursor:pointer}
-.templatebtn:hover{background:rgba(255,255,255,.23);transform:translateY(-1px)}
-.templatebtn .ico{font-size:15px}
+.templatebtn{display:flex;align-items:center;gap:9px;padding:12px 17px;border-radius:12px;background:#fff;border:2px solid #fff;color:#0E5FCC;font:800 13px/1 -apple-system,"Apple SD Gothic Neo",sans-serif;text-decoration:none;white-space:nowrap;transition:.15s;cursor:pointer;box-shadow:0 5px 16px rgba(0,0,0,.22)}
+.templatebtn:hover{background:#EAF3FF;border-color:#EAF3FF;transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.28)}
+.templatebtn .ico{font-size:18px}
+.templatebtn .filetype{font:800 9px/1 ui-monospace,SFMono-Regular,monospace;color:#fff;background:#1877F2;border-radius:5px;padding:4px 5px;letter-spacing:.04em}
 .toast{position:fixed;top:20px;left:50%;z-index:20;transform:translate(-50%,-20px);padding:11px 16px;border-radius:12px;background:#0C2244;color:#fff;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:.2s}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .step{font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--step);margin:26px 0 10px}
@@ -778,7 +779,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
   <div class="logo"><svg id="로고" xmlns="http://www.w3.org/2000/svg" width="488" height="555" viewBox="0 0 488 555"> <path id="모양_1" data-name="모양 1" fill="#1877f2" fill-rule="evenodd" d="M253.775,3.7c35.4,20.454,189.736,109.832,224.059,129.667,4.513,3.12,8.1,5.232,8.943,14.67V403.9c-0.124,9.828-2.857,15.714-11.177,21.1L257.279,551.157c-9.93,5.253-17.835,3.82-26.213-.173L10.569,423.826C4.8,420.583,1.232,416.2,1.4,405.93V145.424a10.362,10.362,0,0,1,5.465-9.569C35.827,119.092,199.631,23.884,235.89,3.207,240.774,0.837,246.235.7,253.775,3.7Z"/> <path id="A_복사" data-name="A 복사" fill="#fff" fill-rule="evenodd" d="M54.059,142.81c24.45-14.452,141.735-83.561,177.814-104.887,5.123-3.774,14.08-3.694,20.049-.07L435.1,144.108c6.54,3.684,2.856,5.879-1.261,8.017l-36.825,21.331c-2.837,1.734-5.82,3.149-11.583.156-15.694-9.233-67.99-39.948-67.99-39.948l-98.752,58.371,66.784,39.289c4.067,2.4,3.782,6.6-2.033,9.193l-31.7,18.738c-7.764,5.249-13.6,2.585-17.774.042-34.068-19.884-155.417-90.713-179.9-105.061C49.507,151.835,50,145.18,54.059,142.81Zm90.06,5.95,97.744-58.371,35.268,22.141-97.744,57.364Z"/> <path id="A_복사_2" data-name="A 복사 2" fill="#fff" fill-rule="evenodd" d="M43.04,181.952c37.979,21.655,151.82,86.7,179.436,102.448a15.415,15.415,0,0,1,7.6,13.439c-0.292,37.115-1.379,175.6-1.667,212.245-0.094,7.367-5.236,5.875-8.171,4.227l-36.075-20.993c-3.431-2.067-5.74-3.982-6.061-9.158,0.265-18.955,1.114-79.654,1.114-79.654L79.584,347.7S78.71,400,78.4,422.015c0.16,5.27-.239,10.208-5.536,7.77L34.615,407.974c-3-2.032-6.064-4.918-5.965-10.836,0.329-32.679,1.654-164.479,2.092-208.055C30.434,183.6,34.531,176.27,43.04,181.952Zm37.238,79.631,99.133,55.936-1.782,41.557L79.37,302.642Z"/> <path id="Z_복사" data-name="Z 복사" fill="#fff" fill-rule="evenodd" d="M263.66,284.057L450.08,172.72c2.179-1.135,6.723-.414,6.392,5.363,0,16.067.024,49.176,0.024,49.176l-120.92,188.2L448.93,347.909c2.1-1.3,6.31-2.767,6.559,3.1v40.522c0.1,5.507-.528,9.513-8.007,15.6C415.2,426.36,294.793,498.045,263.214,516.905c-7.665,3.5-8.614-.994-8.446-3.975,0-15.933.194-49.167,0.194-49.167L376.89,274.56,262.578,342.109c-5.706,2.288-6.608-2-6.608-4.261V298.237C255.97,292.418,255.277,288.533,263.66,284.057Z"/> </svg> </div>
   <div class="headcopy"><h1>쇼파일 생성기</h1><div class="sub">AudioAZ &middot; 채널시트 &rarr; DM7 &middot; KLANG &middot; SuperRack</div></div>
   <div class="headtools">
-    <button class="templatebtn" onclick="saveTemplate()"><span class="ico">&#8595;</span><span>채널시트 템플릿</span></button>
+    <button class="templatebtn" onclick="saveTemplate()"><span class="ico">&#11015;</span><span>채널시트 템플릿 다운받기</span><span class="filetype">XLSX</span></button>
     <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="라이트/다크 전환">&#127769;</button>
   </div>
 </header>

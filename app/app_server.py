@@ -52,6 +52,7 @@ SPRK_BASE = os.path.join(RES, 'base', 'sprk_base.sprk')
 TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트 템플릿.numbers')
 ONLINE_TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트_템플릿.xlsx')
 OFFLINE_APP_PATH = os.path.join(RES, 'base', '쇼파일 생성기_오프라인_AppleSilicon.zip')
+EXAMPLE_SHEET_PATH = os.path.join(RES, 'base', '250927_오펄스_예제.numbers')
 PRESETS = os.path.expanduser('~/Library/Containers/com.klang.klangapp2/Data/Library/KLANGtechnologies/Presets')
 PORT = int(os.environ.get('PORT', '8787'))
 STAGE = '/tmp/showfile_out'   # 로컬 스테이징 — iCloud가 느려도 생성은 즉시 완료
@@ -590,6 +591,20 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             with open(OFFLINE_APP_PATH, 'rb') as f:
                 shutil.copyfileobj(f, self.wfile)
+        elif self.path == '/download/example':
+            if not os.path.isfile(EXAMPLE_SHEET_PATH):
+                self._json({'error': '예제 채널시트 파일을 찾을 수 없습니다.'}, 404)
+                return
+            filename = os.path.basename(EXAMPLE_SHEET_PATH)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/vnd.apple.numbers')
+            self.send_header('Content-Length', str(os.path.getsize(EXAMPLE_SHEET_PATH)))
+            self.send_header('Content-Disposition',
+                             f"attachment; filename*=UTF-8''{quote(filename)}")
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            with open(EXAMPLE_SHEET_PATH, 'rb') as f:
+                shutil.copyfileobj(f, self.wfile)
         elif self.path == '/api/version':
             self._json({'version': APP_VERSION,
                         'channel': RELEASE_CHANNEL.lower()})
@@ -724,12 +739,10 @@ h1{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:21px;font-we
 .templatebtn:hover{background:#EAF3FF;border-color:#EAF3FF;transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.28)}
 .templatebtn .ico{font-size:18px}
 .templatebtn .filetype{font:800 9px/1 ui-monospace,SFMono-Regular,monospace;color:#fff;background:#1877F2;border-radius:5px;padding:4px 5px;letter-spacing:.04em}
-.offlinebtn{display:none;align-items:center;gap:8px;padding:11px 15px;border-radius:12px;background:rgba(5,20,42,.52);border:1px solid rgba(255,255,255,.42);color:#fff;font:750 12px/1 -apple-system,"Apple SD Gothic Neo",sans-serif;text-decoration:none;white-space:nowrap;transition:.15s}
-.offlinebtn:hover{background:rgba(5,20,42,.75);transform:translateY(-1px)}
-.offlinebtn .os{font:800 9px/1 ui-monospace,SFMono-Regular,monospace;color:#0E5FCC;background:#fff;border-radius:5px;padding:4px 5px}
 .trialbanner{display:none;align-items:center;gap:16px;margin:-10px 0 24px;padding:18px 20px;border:1px solid rgba(24,119,242,.28);border-radius:16px;background:linear-gradient(135deg,rgba(24,119,242,.13),rgba(77,150,245,.05));box-shadow:0 5px 18px rgba(12,34,68,.07)}
 .trialbanner .trialicon{width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:12px;background:#1877F2;color:#fff;font-size:20px}
 .trialbanner .trialcopy{flex:1}.trialbanner .trialtitle{font-size:15px;font-weight:850}.trialbanner .trialdesc{margin-top:2px;color:var(--tx2);font-size:13px}
+.trialactions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}.exampledownload{display:inline-flex;align-items:center;color:var(--accent);font-size:12px;font-weight:800;text-decoration:none}.exampledownload:hover{text-decoration:underline}
 .trialdownload{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:11px;background:#1877F2;color:#fff;font-size:13px;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 5px 14px rgba(24,119,242,.25)}
 .trialdownload:hover{background:#0E5FCC}
 .toast{position:fixed;top:20px;left:50%;z-index:20;transform:translate(-50%,-20px);padding:11px 16px;border-radius:12px;background:#0C2244;color:#fff;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:.2s}
@@ -832,14 +845,13 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
   <div class="headcopy"><h1>쇼파일 생성기 <span class="beta-badge">{{RELEASE_CHANNEL}}</span><span class="version-badge">v{{APP_VERSION}}</span></h1><div class="sub">AudioAZ &middot; 채널시트 &rarr; DM7 &middot; KLANG &middot; SuperRack</div></div>
   <div class="headtools">
     <button class="templatebtn" onclick="saveTemplate()"><span class="ico">&#11015;</span><span>채널시트 템플릿 다운받기</span><span class="filetype">XLSX</span></button>
-    <a class="offlinebtn" href="/download/offline"><span>&#128187;</span><span>오프라인 버전 다운로드</span><span class="os">MAC</span></a>
     <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="라이트/다크 전환">&#127769;</button>
   </div>
 </header>
 <div class="trialbanner" id="trialbanner">
   <div class="trialicon">&#128269;</div>
-  <div class="trialcopy"><div class="trialtitle">온라인 버전은 채널시트 분석 체험판입니다</div><div class="trialdesc">업로드한 채널의 네이밍·스테레오 페어·플러그인 체인을 미리 확인할 수 있습니다. 실제 DM7·KLANG·SuperRack 쇼파일 생성과 저장은 오프라인 버전을 이용해 주세요.</div></div>
-  <a class="trialdownload" href="/download/offline">&#128187;&nbsp; 오프라인 생성기 다운로드</a>
+  <div class="trialcopy"><div class="trialtitle">먼저 채널시트 템플릿을 다운로드해 작성해 주세요</div><div class="trialdesc">작성한 채널시트를 이곳에 업로드하면 네이밍·스테레오 페어·플러그인 체인을 미리 확인할 수 있습니다. 온라인은 분석 체험판이며, 실제 DM7·KLANG·SuperRack 쇼파일 생성과 저장은 Mac용 오프라인 생성기에서 진행합니다.</div><div class="trialactions"><a class="exampledownload" href="/download/example">&#128196;&nbsp; 작성 예제 파일 다운로드 (.numbers)</a></div></div>
+  <a class="trialdownload" href="/download/offline">&#128187;&nbsp; 오프라인 생성기 다운로드 (Mac용)</a>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -953,7 +965,7 @@ function updateGo(){
   if(isOnline){
     g.disabled=false;
     g.onclick=()=>{window.location.href='/download/offline';};
-    g.innerHTML='&#128187;&nbsp; 실제 쇼파일 생성하기 &mdash; 오프라인 버전 다운로드';
+    g.innerHTML='&#128187;&nbsp; 실제 쇼파일 생성하기 &mdash; 오프라인 생성기 다운로드 (Mac용)';
     return;
   }
   const any=st.dm7.enabled||st.klang.enabled||st.sprk.enabled;
@@ -1042,7 +1054,6 @@ async function load(){
   sheets=r.sheets;setDirs(r.config);renderList();renderOpts();updateGo();
   if(r.online){
     document.querySelector('.searchrow').innerHTML=`<button class="btn" style="width:100%;padding:14px;font-weight:700" onclick="document.getElementById('uploadInput').click()">채널시트 업로드 (.numbers / .xlsx)</button>`;
-    document.querySelector('.offlinebtn').style.display='flex';
     document.getElementById('trialbanner').style.display='flex';
     document.querySelectorAll('.folderline').forEach(el=>el.style.display='none');
     document.querySelectorAll('.saverow').forEach(el=>{

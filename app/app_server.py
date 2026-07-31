@@ -38,6 +38,7 @@ VOCAB_PATH = os.path.join(RES, 'naming_vocab.json')
 SPRK_BASE = os.path.join(RES, 'base', 'sprk_base.sprk')
 TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트 템플릿.numbers')
 ONLINE_TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트_템플릿.xlsx')
+OFFLINE_APP_PATH = os.path.join(RES, 'base', '쇼파일 생성기_오프라인_AppleSilicon.zip')
 PRESETS = os.path.expanduser('~/Library/Containers/com.klang.klangapp2/Data/Library/KLANGtechnologies/Presets')
 PORT = int(os.environ.get('PORT', '8787'))
 STAGE = '/tmp/showfile_out'   # 로컬 스테이징 — iCloud가 느려도 생성은 즉시 완료
@@ -560,6 +561,20 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             with open(template_path, 'rb') as f:
                 shutil.copyfileobj(f, self.wfile)
+        elif self.path == '/download/offline':
+            if not os.path.isfile(OFFLINE_APP_PATH):
+                self._json({'error': '오프라인 앱 파일을 찾을 수 없습니다.'}, 404)
+                return
+            filename = os.path.basename(OFFLINE_APP_PATH)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/zip')
+            self.send_header('Content-Length', str(os.path.getsize(OFFLINE_APP_PATH)))
+            self.send_header('Content-Disposition',
+                             f"attachment; filename*=UTF-8''{quote(filename)}")
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            with open(OFFLINE_APP_PATH, 'rb') as f:
+                shutil.copyfileobj(f, self.wfile)
         elif self.path == '/api/state':
             c = config()
             ip = lan_ip() if c.get('lan_mode') else None
@@ -682,6 +697,9 @@ h1{font-size:21px;font-weight:800;color:#fff}
 .templatebtn:hover{background:#EAF3FF;border-color:#EAF3FF;transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.28)}
 .templatebtn .ico{font-size:18px}
 .templatebtn .filetype{font:800 9px/1 ui-monospace,SFMono-Regular,monospace;color:#fff;background:#1877F2;border-radius:5px;padding:4px 5px;letter-spacing:.04em}
+.offlinebtn{display:none;align-items:center;gap:8px;padding:11px 15px;border-radius:12px;background:rgba(5,20,42,.52);border:1px solid rgba(255,255,255,.42);color:#fff;font:750 12px/1 -apple-system,"Apple SD Gothic Neo",sans-serif;text-decoration:none;white-space:nowrap;transition:.15s}
+.offlinebtn:hover{background:rgba(5,20,42,.75);transform:translateY(-1px)}
+.offlinebtn .os{font:800 9px/1 ui-monospace,SFMono-Regular,monospace;color:#0E5FCC;background:#fff;border-radius:5px;padding:4px 5px}
 .toast{position:fixed;top:20px;left:50%;z-index:20;transform:translate(-50%,-20px);padding:11px 16px;border-radius:12px;background:#0C2244;color:#fff;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:.2s}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .step{font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--step);margin:26px 0 10px}
@@ -781,6 +799,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
   <div class="headcopy"><h1>쇼파일 생성기</h1><div class="sub">AudioAZ &middot; 채널시트 &rarr; DM7 &middot; KLANG &middot; SuperRack</div></div>
   <div class="headtools">
     <button class="templatebtn" onclick="saveTemplate()"><span class="ico">&#11015;</span><span>채널시트 템플릿 다운받기</span><span class="filetype">XLSX</span></button>
+    <a class="offlinebtn" href="/download/offline"><span>&#128187;</span><span>오프라인 버전 다운로드</span><span class="os">MAC</span></a>
     <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="라이트/다크 전환">&#127769;</button>
   </div>
 </header>
@@ -979,6 +998,7 @@ async function load(){
   sheets=r.sheets;setDirs(r.config);renderList();renderOpts();updateGo();
   if(r.online){
     document.querySelector('.searchrow').innerHTML=`<button class="btn" style="width:100%;padding:14px;font-weight:700" onclick="document.getElementById('uploadInput').click()">채널시트 업로드 (.numbers / .xlsx)</button>`;
+    document.querySelector('.offlinebtn').style.display='flex';
     document.querySelectorAll('.folderline').forEach(el=>el.style.display='none');
     document.querySelectorAll('.saverow').forEach(el=>{
       el.style.display='none';

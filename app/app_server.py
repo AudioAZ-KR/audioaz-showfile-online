@@ -53,6 +53,7 @@ TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트 템플릿.numbers')
 ONLINE_TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트_템플릿.xlsx')
 OFFLINE_APP_PATH = os.path.join(RES, 'base', '쇼파일 생성기_오프라인_AppleSilicon.zip')
 EXAMPLE_SHEET_PATH = os.path.join(RES, 'base', '250927_오펄스_작성예제.xlsx')
+EXAMPLE_NUMBERS_ZIP_PATH = os.path.join(RES, 'base', '250927_오펄스_Numbers작성예제.zip')
 PRESETS = os.path.expanduser('~/Library/Containers/com.klang.klangapp2/Data/Library/KLANGtechnologies/Presets')
 PORT = int(os.environ.get('PORT', '8787'))
 STAGE = '/tmp/showfile_out'   # 로컬 스테이징 — iCloud가 느려도 생성은 즉시 완료
@@ -607,6 +608,20 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             with open(EXAMPLE_SHEET_PATH, 'rb') as f:
                 shutil.copyfileobj(f, self.wfile)
+        elif self.path == '/download/example-numbers-zip':
+            if not os.path.isfile(EXAMPLE_NUMBERS_ZIP_PATH):
+                self._json({'error': 'Numbers 예제 ZIP 파일을 찾을 수 없습니다.'}, 404)
+                return
+            filename = '250927_오펄스_Numbers작성예제.zip'
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/zip')
+            self.send_header('Content-Length', str(os.path.getsize(EXAMPLE_NUMBERS_ZIP_PATH)))
+            self.send_header('Content-Disposition',
+                             f"attachment; filename*=UTF-8''{quote(filename)}")
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            with open(EXAMPLE_NUMBERS_ZIP_PATH, 'rb') as f:
+                shutil.copyfileobj(f, self.wfile)
         elif self.path == '/api/version':
             self._json({'version': APP_VERSION,
                         'channel': RELEASE_CHANNEL.lower()})
@@ -852,7 +867,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
 </header>
 <div class="trialbanner" id="trialbanner">
   <div class="trialicon">&#128269;</div>
-  <div class="trialcopy"><div class="trialtitle">먼저 채널시트 템플릿을 다운로드해 작성해 주세요</div><div class="trialdesc">작성한 채널시트를 이곳에 업로드하면 네이밍·스테레오 페어·플러그인 체인을 미리 확인할 수 있습니다. 온라인은 분석 체험판이며, 실제 DM7·KLANG·SuperRack 쇼파일 생성과 저장은 Mac용 오프라인 생성기에서 진행합니다.</div><div class="trialactions"><a class="exampledownload" href="/download/example">&#128196;&nbsp; 작성 예제 파일 다운로드 (.xlsx &middot; Numbers에서 열기 가능)</a></div></div>
+  <div class="trialcopy"><div class="trialtitle">먼저 채널시트 템플릿을 다운로드해 작성해 주세요</div><div class="trialdesc">작성한 채널시트를 이곳에 업로드하면 네이밍·스테레오 페어·플러그인 체인을 미리 확인할 수 있습니다. 온라인은 분석 체험판이며, 실제 DM7·KLANG·SuperRack 쇼파일 생성과 저장은 Mac용 오프라인 생성기에서 진행합니다.</div><div class="trialactions"><a class="exampledownload" href="/download/example">&#128196;&nbsp; 작성 예제 XLSX</a><span style="color:var(--tx2)">&middot;</span><a class="exampledownload" href="/download/example-numbers-zip">&#128230;&nbsp; Numbers 원본 ZIP (압축 해제 후 열기)</a></div></div>
   <a class="trialdownload" href="/download/offline">&#128187;&nbsp; 오프라인 생성기 다운로드 (Mac용)</a>
 </div>
 <div class="toast" id="toast"></div>

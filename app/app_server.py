@@ -604,8 +604,9 @@ class H(BaseHTTPRequestHandler):
                     self._json({'error': '.numbers 또는 .xlsx 파일만 가능합니다.'}, 400)
                     return
                 os.makedirs(UPLOADS, exist_ok=True)
-                fd, path = tempfile.mkstemp(prefix='sheet_', suffix=ext, dir=UPLOADS)
-                with os.fdopen(fd, 'wb') as out:
+                upload_dir = tempfile.mkdtemp(prefix='upload_', dir=UPLOADS)
+                path = os.path.join(upload_dir, filename)
+                with open(path, 'wb') as out:
                     shutil.copyfileobj(item.file, out)
                 self._json({'name': filename, 'path': path,
                             'mtime': os.path.getmtime(path)})
@@ -814,7 +815,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
 </div>
 
 <div id="outs" style="display:none">
-<div class="step">3 &middot; 출력 &middot; 저장 위치 &middot; 세부 옵션</div>
+<div class="step" id="outputsStep">3 &middot; 출력 &middot; 저장 위치 &middot; 세부 옵션</div>
 <div class="grid">
   <div class="out dm7" id="card_dm7">
     <div class="ohead" onclick="toggleOut('dm7')">
@@ -873,7 +874,7 @@ const DM7OPTS=[["links","스테레오 링크","시트 페어 + OH 관례"],["dca
 const KLANGOPTS=[["links","스테레오 링크",""],["auto_group","자동 그룹","최대 8개 + 정렬"],["color_match","채널 색상 = 그룹 색",""],["panning","패닝 템플릿","드럼 이미지 + 스테레오 폭"],["i3d","i3D 모드","전 믹스"],["gain_minus15","인풋 페이더 -15dB",""],["hide_unused","미사용 채널 숨김",""],["presets_copy","KLANG 앱에 자동 등록","프리셋 폴더 복사"]];
 const SPRKOPTS=[["auto_chain","플러그인 체인 자동 배치","보컬/악기별 · 표에서 개별 수정"]];
 const CHAIN_LABELS={auto:"자동",vocal:"보컬 체인",inst:"악기 체인",none:"빈 랙"};
-let sheets=[],sel=null,busy=false,review=null,edits={},chains={},confirmed={};
+let sheets=[],sel=null,busy=false,review=null,edits={},chains={},confirmed={},isOnline=false;
 const st={dm7:{enabled:false},klang:{enabled:false},sprk:{enabled:false}};
 DM7OPTS.forEach(o=>st.dm7[o[0]]=true);KLANGOPTS.forEach(o=>st.klang[o[0]]=true);SPRKOPTS.forEach(o=>st.sprk[o[0]]=true);
 
@@ -881,7 +882,7 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function renderOpts(){
   for(const [id,opts,side] of [["dm7opts",DM7OPTS,"dm7"],["klangopts",KLANGOPTS,"klang"],["sprkopts",SPRKOPTS,"sprk"]]){
     document.getElementById(id).innerHTML=opts.map(o=>
-      `<div class="opt ${st[side][o[0]]?'on':''}" onclick="tOpt('${side}','${o[0]}',this)"><div class="chk">&#10003;</div>${o[1]}${o[2]?`<span class="h">${o[2]}</span>`:''}</div>`).join('');
+      `<div class="opt ${st[side][o[0]]?'on':''}" data-key="${o[0]}" onclick="tOpt('${side}','${o[0]}',this)"><div class="chk">&#10003;</div>${o[1]}${o[2]?`<span class="h">${o[2]}</span>`:''}</div>`).join('');
   }
 }
 function tOpt(side,k,el){st[side][k]=!st[side][k];el.classList.toggle('on');}
@@ -974,10 +975,18 @@ function applySug(ch){
 function keepName(ch){confirmed[ch]=true;renderReview();updateGo();}
 async function load(){
   const r=await (await fetch('/api/state')).json();
+  isOnline=!!r.online;
   sheets=r.sheets;setDirs(r.config);renderList();renderOpts();updateGo();
   if(r.online){
     document.querySelector('.searchrow').innerHTML=`<button class="btn" style="width:100%;padding:14px;font-weight:700" onclick="document.getElementById('uploadInput').click()">채널시트 업로드 (.numbers / .xlsx)</button>`;
     document.querySelectorAll('.folderline').forEach(el=>el.style.display='none');
+    document.querySelectorAll('.saverow').forEach(el=>{
+      el.style.display='none';
+      if(el.previousElementSibling?.classList.contains('optt'))el.previousElementSibling.style.display='none';
+    });
+    document.getElementById('outputsStep').innerHTML='3 &middot; 출력 &middot; 세부 옵션';
+    st.klang.presets_copy=false;
+    document.querySelector('#klangopts [data-key="presets_copy"]')?.remove();
   }
   if(r.lan){document.getElementById('lanchk').checked=r.lan.on;
     document.getElementById('lanurl').textContent=r.lan.url||'';}

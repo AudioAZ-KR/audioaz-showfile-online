@@ -968,7 +968,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
       <div class="optt">저장 위치</div>
       <div class="saverow"><span class="p" id="dm7dir"></span><button class="btn" onclick="chooseDir('dm7_out_dir')">변경</button></div>
       <div class="optt">리셋 쇼파일 (베이스)</div>
-      <div class="saverow"><span class="p" id="dm7base">AudioAZ 기본 리셋 쇼파일</span>
+      <div class="saverow"><span class="p" id="dm7base">AudioAZ 기본 쇼파일</span>
         <button class="btn" onclick="document.getElementById('basefile').click()">내 리셋 쇼파일 업로드</button>
         <button class="btn" id="baseresetbtn" style="display:none" onclick="resetBase()">기본으로</button>
         <input type="file" id="basefile" accept=".dm7f" style="display:none" onchange="uploadBase(this)"></div>
@@ -1157,7 +1157,7 @@ async function uploadSheet(file){
   busy=false;updateGo();
 }
 function renderBase(custom, name){
-  document.getElementById('dm7base').textContent=custom?('내 리셋 쇼파일: '+name):'AudioAZ 기본 리셋 쇼파일';
+  document.getElementById('dm7base').textContent=custom?('사용자 기본 쇼파일: '+name):'AudioAZ 기본 쇼파일';
   document.getElementById('baseresetbtn').style.display=custom?'':'none';
 }
 async function uploadBase(inp){

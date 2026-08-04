@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 app/config.json
 .DS_Store
+
+# Local Netlify folder
+.netlify

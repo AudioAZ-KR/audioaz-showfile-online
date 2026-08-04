@@ -44,9 +44,16 @@ def patch_blob(raw, spec, is_current):
         wname(raw, ms[ch - 1] + 8, c['name'])
 
     # 스테레오 링크: STEREO 라벨 직전 2바이트 03 80 / 03 01
+    # + 링크 페어에서 이름이 스펙에 없는 쪽(시트 빈 행)은 상대 채널 이름을 미러링
+    have = {c['ch'] for c in spec['channels']}
+    name_by = {c['ch']: c['name'] for c in spec['channels']}
     for a, b in spec.get('pairs', []):
         raw[ms[a - 1] - 2:ms[a - 1]] = b'\x03\x80'
         raw[ms[b - 1] - 2:ms[b - 1]] = b'\x03\x01'
+        if a in name_by and b not in have:
+            wname(raw, ms[b - 1] + 8, name_by[a])
+        elif b in name_by and a not in have:
+            wname(raw, ms[a - 1] + 8, name_by[b])
 
     if is_current:
         # DCA 어사인: u16 LE 마스크 @ 다음 레코드 STEREO -0x14, bit N = DCA N+1

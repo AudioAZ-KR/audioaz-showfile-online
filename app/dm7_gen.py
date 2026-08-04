@@ -60,7 +60,7 @@ def _dca_base(raw, mtx_base):
 
 
 def validate_base(path):
-    """업로드된 리셋 씬이 생성기와 호환되는지 구조 검증."""
+    """업로드된 리셋 쇼파일이 생성기와 호환되는지 구조 검증."""
     try:
         data = open(path, 'rb').read()
     except OSError as e:
@@ -91,9 +91,9 @@ def validate_base(path):
             if _dca_base(raw, mb) > 0:
                 info['dca'] = True
     if not info['channel_sections']:
-        return False, '채널 구조(120채널)를 찾지 못했습니다 — DM7 리셋 씬이 맞는지, 콘솔 펌웨어를 확인해 주세요', info
+        return False, '채널 구조(120채널)를 찾지 못했습니다 — DM7 리셋 쇼파일이 맞는지, 콘솔 펌웨어를 확인해 주세요', info
     if not (info['mix'] and info['matrix']):
-        return False, '믹스/매트릭스 구조를 찾지 못했습니다 — 이 리셋 씬은 호환되지 않습니다', info
+        return False, '믹스/매트릭스 구조를 찾지 못했습니다 — 이 리셋 쇼파일은 호환되지 않습니다', info
     return True, 'OK', info
 
 

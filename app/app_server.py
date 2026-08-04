@@ -695,7 +695,7 @@ class H(BaseHTTPRequestHandler):
             try:
                 n = int(self.headers.get('Content-Length', 0))
                 if n <= 0 or n > 10 * 1024 * 1024:
-                    self._json({'error': '리셋 씬 파일은 10MB 이하만 가능합니다.'}, 413)
+                    self._json({'error': '리셋 쇼파일은 10MB 이하만 가능합니다.'}, 413)
                     return
                 import cgi
                 form = cgi.FieldStorage(
@@ -967,9 +967,9 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
     <div class="obody dm7o">
       <div class="optt">저장 위치</div>
       <div class="saverow"><span class="p" id="dm7dir"></span><button class="btn" onclick="chooseDir('dm7_out_dir')">변경</button></div>
-      <div class="optt">리셋 씬 (베이스)</div>
-      <div class="saverow"><span class="p" id="dm7base">AudioAZ 기본 리셋 씬</span>
-        <button class="btn" onclick="document.getElementById('basefile').click()">내 리셋 씬</button>
+      <div class="optt">리셋 쇼파일 (베이스)</div>
+      <div class="saverow"><span class="p" id="dm7base">AudioAZ 기본 리셋 쇼파일</span>
+        <button class="btn" onclick="document.getElementById('basefile').click()">내 리셋 쇼파일 업로드</button>
         <button class="btn" id="baseresetbtn" style="display:none" onclick="resetBase()">기본으로</button>
         <input type="file" id="basefile" accept=".dm7f" style="display:none" onchange="uploadBase(this)"></div>
       <div class="optt">세부 옵션</div>
@@ -1157,14 +1157,14 @@ async function uploadSheet(file){
   busy=false;updateGo();
 }
 function renderBase(custom, name){
-  document.getElementById('dm7base').textContent=custom?('내 리셋 씬: '+name):'AudioAZ 기본 리셋 씬';
+  document.getElementById('dm7base').textContent=custom?('내 리셋 쇼파일: '+name):'AudioAZ 기본 리셋 쇼파일';
   document.getElementById('baseresetbtn').style.display=custom?'':'none';
 }
 async function uploadBase(inp){
   const f=inp.files[0]; if(!f)return; inp.value='';
   const fd=new FormData(); fd.append('base', f);
   const r=await (await fetch('/api/upload_base',{method:'POST',body:fd})).json();
-  if(r.error){alert('리셋 씬 업로드 실패: '+r.error);return;}
+  if(r.error){alert('리셋 쇼파일 업로드 실패: '+r.error);return;}
   renderBase(true, r.name);
 }
 async function resetBase(){

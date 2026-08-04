@@ -7,6 +7,94 @@ import zlib, re, uuid, struct, json, sys, os
 
 DCA_SLOTS = {'OnAir':1, 'inst':2, 'Sings':3, 'Drums':4, 'AMBI':12}
 COLOR_RE = re.compile(rb'(Blue|Orange|Red|Yellow|Green|Purple|Pink|White)\x00')
+VALID_FLAGS = {b'\x00\x00\x00', b'\x01\x80\x01', b'\x01\x01\x01'}
+MTRX_DELTA = 31048   # MIX1 이름 → MTRX1 이름 오프셋 (펌웨어 상수, 실측)
+DCA_DELTA = 9188     # MTRX 앵커 → DCA 테이블 오프셋 (실측)
+
+
+def _mix_positions(raw, ms):
+    """믹스 1~48 이름 위치. MX 1 리네임된 베이스는 스트라이드 역산 폴백."""
+    marks = [m.start() for m in re.finditer(b'nST/M', raw) if m.start() > ms[-1]]
+    mixpos = {}
+    for i, mk in enumerate(marks[:47]):
+        c = COLOR_RE.search(raw, mk, mk + 0x300)
+        if c:
+            mixpos[i + 2] = c.start() - 0x40
+    mx1 = raw.find(b'MX 1\x00', ms[-1])
+    if mx1 < 0 and 2 in mixpos and 3 in mixpos:
+        cand = 2 * mixpos[2] - mixpos[3]
+        if raw[cand - 3:cand] in VALID_FLAGS:
+            mx1 = cand
+    if mx1 >= 0:
+        mixpos[1] = mx1
+    return mixpos
+
+
+def _matrix_base(raw, ms, mixpos):
+    """MTRX1 이름 위치. 커스텀(TOP/Main) → 공장(MT 1) → 델타 폴백."""
+    for anchor in (b'\x01\x80\x01TOP', b'\x01\x80\x01Main'):
+        tl = raw.find(anchor)
+        if tl >= 0:
+            return tl + 3
+    t = raw.find(b'MT 1\x00', ms[-1])
+    if t >= 0 and raw[t - 3:t] in VALID_FLAGS:
+        return t
+    if 1 in mixpos:
+        cand = mixpos[1] + MTRX_DELTA
+        if all(raw[cand + k * 0x206 - 3:cand + k * 0x206] in VALID_FLAGS for k in range(8)):
+            return cand
+    return -1
+
+
+def _dca_base(raw, mtx_base):
+    """DCA 이름 테이블 위치(\x01 플래그 포함). 커스텀(OnAir) → 공장(DCA 1) → 델타 폴백."""
+    for anchor in (b'\x01OnAir', b'\x01DCA 1', b'\x01DCA  1'):
+        loc = raw.find(anchor)
+        if loc >= 0:
+            return loc
+    if mtx_base > 0:
+        cand = (mtx_base - 3) + DCA_DELTA
+        if raw[cand:cand + 1] == b'\x01':
+            return cand
+    return -1
+
+
+def validate_base(path):
+    """업로드된 리셋 씬이 생성기와 호환되는지 구조 검증."""
+    try:
+        data = open(path, 'rb').read()
+    except OSError as e:
+        return False, f'파일을 읽을 수 없습니다: {e}', {}
+    info = {'sections': 0, 'channel_sections': 0, 'mix': False, 'matrix': False, 'dca': False}
+    if b'#FILE' not in data or b'#END' not in data:
+        return False, '.dm7f 형식이 아닙니다 (DM7 콘솔에서 저장한 파일인지 확인해 주세요)', info
+    try:
+        secs = find_sections(data)
+    except Exception:
+        secs = []
+    info['sections'] = len(secs)
+    for h, p, plen in secs:
+        try:
+            raw = zlib.decompress(data[p:])
+        except Exception:
+            continue
+        ms = [x.start() for x in re.finditer(b'STEREO', raw)]
+        if len(ms) != 120 or len({b - a for a, b in zip(ms, ms[1:])}) != 1:
+            continue
+        info['channel_sections'] += 1
+        mixpos = _mix_positions(raw, ms)
+        if len(mixpos) >= 40:
+            info['mix'] = True
+        mb = _matrix_base(raw, ms, mixpos)
+        if mb > 0:
+            info['matrix'] = True
+            if _dca_base(raw, mb) > 0:
+                info['dca'] = True
+    if not info['channel_sections']:
+        return False, '채널 구조(120채널)를 찾지 못했습니다 — DM7 리셋 씬이 맞는지, 콘솔 펌웨어를 확인해 주세요', info
+    if not (info['mix'] and info['matrix']):
+        return False, '믹스/매트릭스 구조를 찾지 못했습니다 — 이 리셋 씬은 호환되지 않습니다', info
+    return True, 'OK', info
 
 
 def find_sections(data):
@@ -65,23 +153,15 @@ def patch_blob(raw, spec, is_current):
             if mask:
                 ch = c['ch']
                 raw[ms[ch] - 0x14:ms[ch] - 0x12] = struct.pack('<H', mask)
-        # DCA 이름 테이블 (앵커 \x01OnAir, 레코드 0x58): AMBI 사용 시 DCA12 리네임 필수
-        loc = raw.find(b'\x01OnAir')
+        # DCA 이름 테이블 (레코드 0x58): AMBI 사용 시 DCA12 리네임 필수
+        loc = _dca_base(raw, _matrix_base(raw, ms, _mix_positions(raw, ms)))
         if loc >= 0:
             for slot, nm in spec.get('dca_names', {}).items():
                 s = loc + (int(slot) - 1) * 0x58
                 raw[s + 1:s + 16] = nm.encode() + b'\x00' * (15 - len(nm.encode()))
 
     # MIX 레코드: nST/M 마커, 이름 = 컬러 문자열 -0x40, 링크+PanLink = 이름 -3 (01 80 01 / 01 01 01)
-    marks = [m.start() for m in re.finditer(b'nST/M', raw) if m.start() > ms[-1]]
-    mixpos = {}
-    mx1 = raw.find(b'MX 1\x00', ms[-1])
-    if mx1 >= 0:
-        mixpos[1] = mx1
-    for i, mk in enumerate(marks[:47]):
-        c = COLOR_RE.search(raw, mk, mk + 0x300)
-        if c:
-            mixpos[i + 2] = c.start() - 0x40
+    mixpos = _mix_positions(raw, ms)
     for n, mx in spec.get('mixes', {}).items():
         n = int(n)
         if n in mixpos:
@@ -91,12 +171,9 @@ def patch_blob(raw, spec, is_current):
             raw[mixpos[a] - 3:mixpos[a]] = b'\x01\x80\x01'
             raw[mixpos[b] - 3:mixpos[b]] = b'\x01\x01\x01'
 
-    # MATRIX: 앵커 \x01\x80\x01TOP(MTRX1), 고정 스트라이드 0x206
-    tl = raw.find(b'\x01\x80\x01TOP')
-    if tl < 0:
-        tl = raw.find(b'\x01\x80\x01Main')  # 이미 리네임된 베이스 대응
-    if tl >= 0:
-        base = tl + 3
+    # MATRIX: 고정 스트라이드 0x206 (커스텀/공장/델타 앵커 폴백)
+    base = _matrix_base(raw, ms, mixpos)
+    if base > 0:
         for n, mt in spec.get('matrix', {}).items():
             off = base + (int(n) - 1) * 0x206
             wname(raw, off, mt['name'], 0x40)

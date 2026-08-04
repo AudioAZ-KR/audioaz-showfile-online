@@ -57,6 +57,11 @@ PRESETS = os.path.expanduser('~/Library/Containers/com.klang.klangapp2/Data/Libr
 PORT = int(os.environ.get('PORT', '8787'))
 STAGE = '/tmp/showfile_out'   # 로컬 스테이징 — iCloud가 느려도 생성은 즉시 완료
 UPLOADS = '/tmp/showfile_uploads'
+CUSTOM_DM7_BASE = os.path.join(_cfg_dir if FROZEN else HERE, 'custom_dm7_base.dm7f')
+
+
+def dm7_base_path():
+    return CUSTOM_DM7_BASE if os.path.isfile(CUSTOM_DM7_BASE) else None
 ONLINE = os.environ.get('SHOWFILE_ONLINE', '').lower() in ('1', 'true', 'yes')
 _SRV = {}                     # 실행 중 서버 (LAN 모드 전환 시 재바인드용)
 
@@ -432,7 +437,7 @@ def generate(req):
         sp = '/tmp/showfile_spec_dm7.json'
         json.dump(s, open(sp, 'w'), ensure_ascii=False)
         out = os.path.join(STAGE, spec['name'] + '.dm7f')
-        dm7_gen.generate(sp, out)
+        dm7_gen.generate(sp, out, dm7_base_path())
         copies.append((out, dm7_dir))
 
     k = req.get('klang') or {}
@@ -637,7 +642,9 @@ class H(BaseHTTPRequestHandler):
             self._json({'sheets': scan_sheets(), 'config': c,
                         'online': ONLINE,
                         'lan': {'on': bool(c.get('lan_mode')),
-                                'url': f'http://{ip}:{PORT}' if ip else None}})
+                                'url': f'http://{ip}:{PORT}' if ip else None},
+                        'dm7_base': {'custom': dm7_base_path() is not None,
+                                     'name': c.get('dm7_base_name', '')}})
         elif self.path.startswith('/download/output/'):
             filename = os.path.basename(unquote(self.path.split('/download/output/', 1)[1]))
             path = os.path.join(STAGE, filename)
@@ -684,10 +691,52 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:
                 self._json({'error': f'업로드 실패: {e}'}, 500)
             return
+        if self.path == '/api/upload_base':
+            try:
+                n = int(self.headers.get('Content-Length', 0))
+                if n <= 0 or n > 10 * 1024 * 1024:
+                    self._json({'error': '리셋 씬 파일은 10MB 이하만 가능합니다.'}, 413)
+                    return
+                import cgi
+                form = cgi.FieldStorage(
+                    fp=self.rfile, headers=self.headers,
+                    environ={'REQUEST_METHOD': 'POST',
+                             'CONTENT_TYPE': self.headers.get('Content-Type', '')})
+                item = form['base']
+                filename = os.path.basename(item.filename or '')
+                if not filename.lower().endswith('.dm7f'):
+                    self._json({'error': '.dm7f 파일만 업로드할 수 있습니다.'}, 400)
+                    return
+                tmp = CUSTOM_DM7_BASE + '.tmp'
+                os.makedirs(os.path.dirname(tmp), exist_ok=True)
+                with open(tmp, 'wb') as out:
+                    shutil.copyfileobj(item.file, out)
+                ok, msg, info = dm7_gen.validate_base(tmp)
+                if not ok:
+                    os.remove(tmp)
+                    self._json({'error': msg, 'info': info}, 400)
+                    return
+                os.replace(tmp, CUSTOM_DM7_BASE)
+                c = config()
+                c['dm7_base_name'] = filename
+                save_config(c)
+                self._json({'ok': True, 'name': filename, 'info': info})
+            except Exception as e:
+                self._json({'error': f'업로드 실패: {e}'}, 500)
+            return
         n = int(self.headers.get('Content-Length', 0))
         req = json.loads(self.rfile.read(n) or b'{}')
         try:
-            if self.path == '/api/choose':
+            if self.path == '/api/reset_base':
+                try:
+                    os.remove(CUSTOM_DM7_BASE)
+                except OSError:
+                    pass
+                c = config()
+                c.pop('dm7_base_name', None)
+                save_config(c)
+                self._json({'ok': True})
+            elif self.path == '/api/choose':
                 key = req['key']
                 prompts = {'sheets_dir': '채널시트 폴더를 선택하세요',
                            'dm7_out_dir': 'DM7 쇼파일 저장 폴더를 선택하세요',
@@ -918,6 +967,11 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
     <div class="obody dm7o">
       <div class="optt">저장 위치</div>
       <div class="saverow"><span class="p" id="dm7dir"></span><button class="btn" onclick="chooseDir('dm7_out_dir')">변경</button></div>
+      <div class="optt">리셋 씬 (베이스)</div>
+      <div class="saverow"><span class="p" id="dm7base">AudioAZ 기본 리셋 씬</span>
+        <button class="btn" onclick="document.getElementById('basefile').click()">내 리셋 씬</button>
+        <button class="btn" id="baseresetbtn" style="display:none" onclick="resetBase()">기본으로</button>
+        <input type="file" id="basefile" accept=".dm7f" style="display:none" onchange="uploadBase(this)"></div>
       <div class="optt">세부 옵션</div>
       <div id="dm7opts"></div>
     </div>
@@ -1089,6 +1143,7 @@ async function load(){
   }
   if(r.lan){document.getElementById('lanchk').checked=r.lan.on;
     document.getElementById('lanurl').textContent=r.lan.url||'';}
+  if(r.dm7_base)renderBase(r.dm7_base.custom, r.dm7_base.name);
 }
 async function uploadSheet(file){
   if(!file)return;
@@ -1100,6 +1155,21 @@ async function uploadSheet(file){
     sheets=[r];renderList();pick(r);showToast('업로드 완료');
   }catch(e){showToast(e.message);}
   busy=false;updateGo();
+}
+function renderBase(custom, name){
+  document.getElementById('dm7base').textContent=custom?('내 리셋 씬: '+name):'AudioAZ 기본 리셋 씬';
+  document.getElementById('baseresetbtn').style.display=custom?'':'none';
+}
+async function uploadBase(inp){
+  const f=inp.files[0]; if(!f)return; inp.value='';
+  const fd=new FormData(); fd.append('base', f);
+  const r=await (await fetch('/api/upload_base',{method:'POST',body:fd})).json();
+  if(r.error){alert('리셋 씬 업로드 실패: '+r.error);return;}
+  renderBase(true, r.name);
+}
+async function resetBase(){
+  await fetch('/api/reset_base',{method:'POST',body:'{}'});
+  renderBase(false,'');
 }
 async function setLan(on){
   const r=await (await fetch('/api/set_lan',{method:'POST',body:JSON.stringify({on})})).json();

@@ -5,3 +5,4 @@ app/config.json
 
 # Local Netlify folder
 .netlify
+app/custom_dm7_base.dm7f

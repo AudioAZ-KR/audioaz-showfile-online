@@ -16,6 +16,8 @@ spec.json 스키마:
 - rack: 1-based 랙 번호. ch: 1-based 드라이버(콘솔) 채널, 2개면 스테레오.
 - chain: 템플릿 랙1(스테레오)/랙2(모노)에 존재하는 플러그인 이름만 사용 가능.
 - spec에 없는 랙: 이름 "Rack N" 유지, 플러그인·라우팅 제거(빈 랙).
+- 선택 "layers": [{"name":"Sings","tracks":[{"rack":1,"strip":0},…]}] —
+  OVV1(surface 2) 커스텀 레이어 페이지에 랙 배치(페이지당 16스트립, 최대 4페이지)·페이지 리네임.
 
 전제(디폴트 셋.sprk 기준): 랙1=스테레오, 랙2=모노, 두 랙이 사용할 모든
 플러그인의 모노/스테레오 변형(4cc·preset)을 갖고 있어야 한다.
@@ -209,6 +211,34 @@ def main():
             )
             next_route_id += 1
 
+    # 커스텀 레이어 (OVV1 = surface_type 2, 페이지 4개 × 16스트립)
+    layers = spec.get("layers") or []
+    if layers:
+        l_ids = [r[0] for r in cur.execute(
+            "select id from ovv_layer where surface_type=2 order by id")]
+        cur.execute(
+            "delete from ovv_layer_track where layer_id in"
+            " (select id from ovv_layer where surface_type=2)")
+        next_lt = (cur.execute("select coalesce(max(id),0) from ovv_layer_track")
+                   .fetchone()[0]) + 1
+        for li, layer in enumerate(layers):
+            if li >= len(l_ids):
+                break
+            lid = l_ids[li]
+            if layer.get("name"):
+                cur.execute("update ovv_layer set name=? where id=?",
+                            (layer["name"][:20], lid))
+            for tr in layer.get("tracks", []):
+                if not (0 <= tr["strip"] < 16):
+                    fail(f"레이어 {layer.get('name')}: strip {tr['strip']} 범위 초과")
+                if tr["rack"] - 1 not in rack_ids:
+                    fail(f"레이어 {layer.get('name')}: 랙 {tr['rack']} 없음")
+                cur.execute(
+                    "insert into ovv_layer_track (id, layer_id, track_type,"
+                    " track_index, strip_index) values (?,?,0,?,?)",
+                    (next_lt, lid, tr["rack"] - 1, tr["strip"]))
+                next_lt += 1
+
     db.commit()
 
     # ── 자체 검증 ──────────────────────────────────────────
@@ -248,8 +278,13 @@ def main():
     db.close()
 
     n_st = sum(1 for r in racks if len(r["ch"]) == 2)
+    n_lt = cur2 = db2 = None
+    import sqlite3 as _sq
+    db2 = _sq.connect(out_path)
+    n_lt = db2.execute("select count(*) from ovv_layer_track").fetchone()[0]
+    db2.close()
     print(f"OK: {out_path.name} — 랙 {len(racks)}개 사용(스테레오 {n_st}), "
-          f"빈 랙 {num_racks - len(racks)}개, 검증 통과")
+          f"빈 랙 {num_racks - len(racks)}개, 레이어 배치 {n_lt}개, 검증 통과")
 
 
 def generate(spec_path, out_path, template_path=None):

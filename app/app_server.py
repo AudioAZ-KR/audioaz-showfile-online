@@ -361,10 +361,31 @@ def build_sprk_spec(spec, chain_overrides):
         kind = chain_overrides.get(str(ch), 'auto')
         if kind == 'auto':
             kind = sprk_chain_auto(c)
-        racks.append({'rack': rack, 'name': name, 'ch': chs, 'chain': CHAINS[kind]})
+        racks.append({'rack': rack, 'name': name, 'ch': chs, 'chain': CHAINS[kind],
+                      '_group': c.get('group'), '_click': ('click' in c['name'].lower()
+                                                           or '클릭' in c['name'])})
         rack += 1
     assert rack - 1 <= 64, f'랙 {rack-1}개 — SuperRack 한도(64) 초과'
-    return {'racks': racks}
+
+    # 커스텀 레이어 자동 배치 (실제 쇼파일 학습 컨벤션: Sings→Inst→Drums→Etc, 16스트립/페이지)
+    PAGE_OF = {'Sings': 'Sings', 'Piano': 'Inst', 'Key': 'Inst', 'GTR': 'Inst',
+               'AG': 'Inst', 'Bass': 'Inst', 'Drums': 'Drums', 'AMBI': 'Etc', None: 'Etc'}
+    buckets = {'Sings': [], 'Inst': [], 'Drums': [], 'Etc': []}
+    for r in racks:
+        if r.pop('_click'):
+            r.pop('_group', None)
+            continue                      # 클릭은 레이어 제외 (라이브 중 만질 일 없음)
+        buckets[PAGE_OF.get(r.pop('_group'), 'Etc')].append(r['rack'])
+    layers = []
+    for label in ('Sings', 'Inst', 'Drums', 'Etc'):
+        items = buckets[label]
+        for pi in range(0, len(items), 16):
+            page = items[pi:pi + 16]
+            nm = label if pi == 0 else f'{label} {pi // 16 + 1}'
+            layers.append({'name': nm,
+                           'tracks': [{'rack': rk, 'strip': i} for i, rk in enumerate(page)]})
+    layers = layers[:4]                   # OVV1 페이지 4개 한도
+    return {'racks': racks, 'layers': layers}
 
 
 def generate(req):

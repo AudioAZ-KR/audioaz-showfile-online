@@ -220,7 +220,8 @@ def classify(chans):
             c.update(group=None, dca=[], pan='mono')
         elif re.search(r'mc|pastor|설교|사회|speech|스피치|예비', low):
             c.update(group='Sings', dca=[], pan='mono')
-        elif re.search(r'wl|무선|sing|vox|chorus|합창|코러스|소프라노|leader|인도', low) or not is_ascii(base):
+        elif (re.search(r'wl|무선|sing|vox|chorus|합창|코러스|소프라노|leader|인도|guest|게스트|핀|\bpin\b', low)
+              or not is_ascii(base)):
             c.update(group='Sings', dca=['OnAir', 'Sings'], pan='mono')
         else:
             c.update(group=None, dca=[], pan='mono')

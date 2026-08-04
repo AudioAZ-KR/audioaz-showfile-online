@@ -240,34 +240,117 @@ def classify(chans):
 
 
 def parse_outputs(outputs):
-    mixes, mix_pairs, matrix = {}, [], {}
-    iem_mixes = []
+    """아웃풋 열 해석 — 믹스·매트릭스 이름 + 스테레오 링크 페어.
+    페어 판정(믹스·매트릭스 공통, 인접 n/n+1):
+      ① IEM 행(다음 믹스와 페어) ② 같은 이름 인접 ③ 이름 빈 행 + 장비 있음(이름 복사)
+      ④ L/R 접미 인접 ⑤ 범위 표기(Mix 7-8, Matrix 3-4) ⑥ 한 셀에 두 개(Mix 13\nMix 14)"""
+    mix_rows, mtx_rows = {}, {}
+    mix_pairs, mtx_pairs = [], []
     for dev, out, nm in outputs:
-        m = re.match(r'mix\s*(\d+)', out.lower())
-        if m:
-            n = int(m.group(1))
-            if 'iem' in dev.lower() or 'iem' in nm.lower():
-                iem_mixes.append((n, nm or f'IEM {len(iem_mixes)+1}'))
-            elif nm:
-                label = nm if is_ascii(nm) else nm
-                mixes[str(n)] = {'name': label[:12]}
-        m2 = re.match(r'mtrx\s*(\d+)', out.lower())
-        if m2 and nm:
-            n = int(m2.group(1))
-            base = re.sub(r'\s*[LR]$', '', nm)
-            link = 'L' if nm.strip().endswith('L') else ('R' if nm.strip().endswith('R') else None)
-            ent = {'name': base[:12]}
-            if link:
-                ent['link'] = link
+        low = out.strip().lower()
+        nm = nm.strip()
+        mr = re.match(r'^mix\s*(\d+)\s*[-\u2013~]\s*(\d+)$', low)
+        nums = ([int(mr.group(1)), int(mr.group(2))] if mr
+                else [int(x) for x in re.findall(r'mix\s*(\d+)', low)])
+        if nums:
+            for n in nums:
+                if n not in mix_rows:
+                    mix_rows[n] = [nm, dev]
+                elif nm and not mix_rows[n][0]:
+                    mix_rows[n][0] = nm
+            if len(nums) == 2 and abs(nums[1] - nums[0]) == 1:
+                mix_pairs.append(sorted(nums))
+            continue
+        mm = re.match(r'^(?:mtrx|matrix)\s*(\d+)(?:\s*[-\u2013~]\s*(\d+))?$', low)
+        if mm:
+            n1 = int(mm.group(1))
+            n2 = int(mm.group(2)) if mm.group(2) else None
+            if n1 not in mtx_rows or (nm and not mtx_rows[n1][0]):
+                mtx_rows[n1] = [nm, dev]
+            if n2:
+                if n2 not in mtx_rows or (nm and not mtx_rows[n2][0]):
+                    mtx_rows[n2] = [nm, dev]
+                if abs(n2 - n1) == 1:
+                    mtx_pairs.append(sorted([n1, n2]))
+
+    def lr_base(s):
+        return re.sub(r'[\s._-]*[LR]$', '', s) if s else s
+
+    def find_pairs(rows, pairs, iem_ok):
+        used = {x for p in pairs for x in p}
+        for n in sorted(rows):
+            if n in used:
+                continue
+            nm, dev = rows[n]
+            if not nm:
+                continue
+            pair = False
+            if iem_ok and 'iem' in (dev + ' ' + nm).lower():
+                pair = True                                   # ① IEM
             else:
-                ent['mono'] = True
-            matrix[str(n)] = ent
-    for k, (n, nm) in enumerate(iem_mixes):
-        label = nm if is_ascii(nm) else f'IEM {k+1}'
-        mixes[str(n)] = {'name': label[:12]}
-        mixes[str(n + 1)] = {'name': label[:12]}
-        mix_pairs.append([n, n + 1])
+                nxt = rows.get(n + 1)
+                if nxt is not None and n + 1 not in used:
+                    nnm = nxt[0]
+                    if nnm and nnm == nm:
+                        pair = True                           # ② 같은 이름
+                    elif not nnm and nxt[1].strip():
+                        pair = True                           # ③ 빈 이름 + 장비
+                    elif (nnm and nm != nnm and lr_base(nm)
+                          and lr_base(nm) == lr_base(nnm)):
+                        pair = True                           # ④ L/R 접미
+            if pair:
+                pairs.append([n, n + 1])
+                used.update((n, n + 1))
+                if n + 1 not in rows:
+                    rows[n + 1] = [nm, dev]
+                elif not rows[n + 1][0]:
+                    rows[n + 1][0] = nm
+            else:
+                used.add(n)
+        return pairs
+
+    find_pairs(mix_rows, mix_pairs, iem_ok=True)
+    find_pairs(mtx_rows, mtx_pairs, iem_ok=True)   # IEM 수신 매트릭스도 페어
+
+    mixes = {}
+    iem_k = 0
+    mix_paired = {x for p in mix_pairs for x in p}
+    for n in sorted(mix_rows):
+        nm, dev = mix_rows[n]
+        if not nm:
+            continue
+        if 'iem' in (dev + ' ' + nm).lower() and not is_ascii(nm):
+            if n in mix_paired and n - 1 in mix_rows and mix_rows[n - 1][0] == nm:
+                pass                                          # 페어 두 번째는 같은 라벨 재사용
+            else:
+                iem_k += 1
+            nm = f'IEM {iem_k}'
+        mixes[str(n)] = {'name': nm[:12]}
+    # IEM 페어 두 번째 믹스 이름 동기화
+    for a, b in mix_pairs:
+        if str(a) in mixes and (str(b) not in mixes or mixes[str(b)]['name'] != mixes[str(a)]['name']):
+            if str(b) not in mixes or mix_rows.get(b, ['', ''])[0] in ('', mix_rows.get(a, ['', ''])[0]):
+                mixes[str(b)] = {'name': mixes[str(a)]['name']}
+
+    matrix = {}
+    mtx_paired = {}
+    for a, b in mtx_pairs:
+        mtx_paired[a] = 'L'
+        mtx_paired[b] = 'R'
+    for n in sorted(mtx_rows):
+        nm, dev = mtx_rows[n]
+        if not nm:
+            continue
+        if n in mtx_paired:
+            matrix[str(n)] = {'name': lr_base(nm)[:12], 'link': mtx_paired[n]}
+        else:
+            link = 'L' if nm.endswith('L') else ('R' if nm.endswith('R') else None)
+            if link:
+                matrix[str(n)] = {'name': lr_base(nm)[:12], 'link': link}
+            else:
+                matrix[str(n)] = {'name': nm[:12], 'mono': True}
     return mixes, mix_pairs, matrix
+
 
 
 def build_spec(sheet_path, show_name=None):

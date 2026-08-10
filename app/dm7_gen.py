@@ -146,13 +146,20 @@ def patch_blob(raw, spec, is_current):
     if is_current:
         # DCA 어사인: u16 LE 마스크 @ 다음 레코드 STEREO -0x14, bit N = DCA N+1
         # Current에만 기록 (콘솔도 씬에는 안 씀)
+        mask_by = {}
         for c in spec['channels']:
             mask = 0
             for d in c.get('dca', []):
                 mask |= 1 << (DCA_SLOTS[d] - 1)
+            mask_by[c['ch']] = mask
             if mask:
-                ch = c['ch']
-                raw[ms[ch] - 0x14:ms[ch] - 0x12] = struct.pack('<H', mask)
+                raw[ms[c['ch']] - 0x14:ms[c['ch']] - 0x12] = struct.pack('<H', mask)
+        # 링크 페어 뒷채널(시트 빈 행)에도 어사인 미러링 — 이름과 동일 원칙
+        for a, b in spec.get('pairs', []):
+            if a in mask_by and b not in mask_by and mask_by[a]:
+                raw[ms[b] - 0x14:ms[b] - 0x12] = struct.pack('<H', mask_by[a])
+            elif b in mask_by and a not in mask_by and mask_by[b]:
+                raw[ms[a] - 0x14:ms[a] - 0x12] = struct.pack('<H', mask_by[b])
         # DCA 이름 테이블 (레코드 0x58): AMBI 사용 시 DCA12 리네임 필수
         loc = _dca_base(raw, _matrix_base(raw, ms, _mix_positions(raw, ms)))
         if loc >= 0:

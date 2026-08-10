@@ -2,6 +2,13 @@
 
 이 프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/) 형식의 버전 번호를 사용합니다.
 
+## [0.5.0] - 2026-08-10
+
+- SuperRack 보컬 체인 최신화: Clear Voice Live를 첫 인서트로 추가
+  (Clear Voice Live → CrvEqtrL → Pro-Q 4 → F6-RTA)
+- 실사용 쇼파일(260805 꿈의교회)의 플러그인 설정값을 그대로 템플릿에 반영
+- 스테레오 보컬 랙은 모노 전용인 Clear Voice Live를 자동 제외
+
 ## [0.4.2] - 2026-08-04
 
 - 베이스 상태 표기 명확화: 업로드 전 "AudioAZ 기본 쇼파일" → 업로드 후 "사용자 기본 쇼파일: 파일명"

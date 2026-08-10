@@ -208,10 +208,11 @@ def std_abbr_suggest(sheet_name):
     return out[:12]
 
 
-CHAINS = {'vocal': ['CrvEqtrL', 'Pro-Q 4', 'F6-RTA'],
+CHAINS = {'vocal': ['Clear Voice Live', 'CrvEqtrL', 'Pro-Q 4', 'F6-RTA'],
           'inst': ['Pro-Q 4', 'F6-RTA'],
           'none': []}
-CHAIN_LABEL = {'vocal': '보컬 (CrvEqtrL→Q4→F6)', 'inst': '악기 (Q4→F6)', 'none': '빈 랙'}
+CHAIN_LABEL = {'vocal': '보컬 (CVL→Crv→Q4→F6)', 'inst': '악기 (Q4→F6)', 'none': '빈 랙'}
+STEREO_UNSUPPORTED = {'Clear Voice Live'}   # 템플릿에 모노 변형만 있는 플러그인
 
 
 DEFAULT_CFG = {
@@ -366,7 +367,9 @@ def build_sprk_spec(spec, chain_overrides):
         kind = chain_overrides.get(str(ch), 'auto')
         if kind == 'auto':
             kind = sprk_chain_auto(c)
-        racks.append({'rack': rack, 'name': name, 'ch': chs, 'chain': CHAINS[kind],
+        chain = [pl for pl in CHAINS[kind]
+                 if not (len(chs) == 2 and pl in STEREO_UNSUPPORTED)]
+        racks.append({'rack': rack, 'name': name, 'ch': chs, 'chain': chain,
                       '_group': c.get('group'), '_click': ('click' in c['name'].lower()
                                                            or '클릭' in c['name'])})
         rack += 1

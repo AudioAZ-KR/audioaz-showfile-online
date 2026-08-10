@@ -362,6 +362,9 @@ def build_spec(sheet_path, show_name=None):
     if not show_name:
         base = os.path.splitext(os.path.basename(sheet_path))[0]
         base = unicodedata.normalize('NFC', base)
+        m_date = re.match(r'^(\d{6})[_ ]?', base)
+        if m_date:
+            today = m_date.group(1)          # 시트의 행사 날짜 우선, 없으면 오늘
         base = re.sub(r'^\d{6}[_ ]?', '', base)
         ascii_base = base if is_ascii(base) else romanize(base)
         ascii_name = f'{today}_{re.sub(r"[^A-Za-z0-9 _-]", "", ascii_base).strip().replace(" ", "") or "Show"}'

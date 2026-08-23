@@ -2,6 +2,10 @@
 
 이 프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/) 형식의 버전 번호를 사용합니다.
 
+## [0.5.4] - 2026-08-10
+
+- MADE IN KOREA 뱃지의 태극기를 이모지(🇰🇷)로 교체
+
 ## [0.5.3] - 2026-08-10
 
 - 헤더에 MADE IN KOREA 뱃지(태극기 SVG) 추가

@@ -57,6 +57,22 @@ PRESETS = os.path.expanduser('~/Library/Containers/com.klang.klangapp2/Data/Libr
 PORT = int(os.environ.get('PORT', '8787'))
 STAGE = '/tmp/showfile_out'   # 로컬 스테이징 — iCloud가 느려도 생성은 즉시 완료
 UPLOADS = '/tmp/showfile_uploads'
+
+
+def _purge_uploads(max_age=3600):
+    """약관 고지대로 업로드 임시파일을 주기 삭제 (1시간 경과분)"""
+    import time as _t
+    try:
+        now = _t.time()
+        for d in os.listdir(UPLOADS):
+            path = os.path.join(UPLOADS, d)
+            try:
+                if now - os.path.getmtime(path) > max_age:
+                    shutil.rmtree(path, ignore_errors=True)
+            except OSError:
+                pass
+    except OSError:
+        pass
 CUSTOM_DM7_BASE = os.path.join(_cfg_dir if FROZEN else HERE, 'custom_dm7_base.dm7f')
 
 
@@ -648,6 +664,23 @@ class H(BaseHTTPRequestHandler):
                                 'url': f'http://{ip}:{PORT}' if ip else None},
                         'dm7_base': {'custom': dm7_base_path() is not None,
                                      'name': c.get('dm7_base_name', '')}})
+        elif self.path == '/terms':
+            try:
+                md = open(os.path.join(RES, 'base', 'TERMS.md'), encoding='utf-8').read()
+            except OSError:
+                md = '약관 문서를 찾을 수 없습니다.'
+            import html as _h
+            body = _h.escape(md)
+            page = ('<meta charset="utf-8"><title>이용약관 · 쇼파일 생성기</title>'
+                    '<body style="max-width:760px;margin:40px auto;padding:0 20px;'
+                    'font:15px/1.75 -apple-system,\'Apple SD Gothic Neo\',sans-serif;color:#0C2244">'
+                    '<pre style="white-space:pre-wrap;font:inherit">' + body + '</pre></body>')
+            b = page.encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Length', str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
         elif self.path.startswith('/download/output/'):
             filename = os.path.basename(unquote(self.path.split('/download/output/', 1)[1]))
             path = os.path.join(STAGE, filename)
@@ -685,6 +718,7 @@ class H(BaseHTTPRequestHandler):
                     self._json({'error': '.numbers 또는 .xlsx 파일만 가능합니다.'}, 400)
                     return
                 os.makedirs(UPLOADS, exist_ok=True)
+                _purge_uploads()
                 upload_dir = tempfile.mkdtemp(prefix='upload_', dir=UPLOADS)
                 path = os.path.join(upload_dir, filename)
                 with open(path, 'wb') as out:
@@ -1013,6 +1047,11 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
 <div class="result card" id="result"></div>
 <div class="err" id="err"></div>
 
+<footer style="margin-top:34px;padding:18px 4px 8px;border-top:1px solid var(--line);font-size:11.5px;line-height:1.7;color:var(--tx2)">
+  © 2026 AudioAZ · 무료 배포판 · <a href="/terms" target="_blank" style="color:var(--accent);font-weight:700">이용약관·면책 고지</a><br>
+  Yamaha·DM7, KLANG, Waves·SuperRack 등은 각 소유자의 상표이며, 본 소프트웨어는 해당 제조사와 제휴·승인 관계가 없는 독립 소프트웨어입니다.
+  생성 파일은 <b>공연 전 반드시 장비에서 사전 점검</b> 후 사용하세요. 업로드 파일은 분석 후 자동 삭제됩니다.
+</footer>
 <div class="gen"><button class="genbtn" id="go" onclick="gen()" disabled>시트를 선택하세요</button></div>
 </div>
 <script>

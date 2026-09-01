@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """채널시트(.numbers/.xlsx) → 스펙 JSON 자동 변환
-2026-07-21 확정 컨벤션을 규칙으로 코드화. 표준 시트는 무인 변환, 특수 케이스는 Claude 대화로.
+2026-07-21 확정 컨벤션을 규칙으로 코드화. 표준 시트는 무인 변환, 특수 케이스는 수동 검토로 처리.
 사용: python3 sheet2spec.py 시트경로 [스펙출력.json] [--name YYMMDD_행사명]
 """
 import sys, os, json, re, datetime, unicodedata

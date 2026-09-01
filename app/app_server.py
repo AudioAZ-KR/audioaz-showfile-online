@@ -953,16 +953,16 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
 </style></head><body><div class="wrap">
 <header>
   <div class="logo"><svg id="로고" xmlns="http://www.w3.org/2000/svg" width="488" height="555" viewBox="0 0 488 555"> <path id="모양_1" data-name="모양 1" fill="#1877f2" fill-rule="evenodd" d="M253.775,3.7c35.4,20.454,189.736,109.832,224.059,129.667,4.513,3.12,8.1,5.232,8.943,14.67V403.9c-0.124,9.828-2.857,15.714-11.177,21.1L257.279,551.157c-9.93,5.253-17.835,3.82-26.213-.173L10.569,423.826C4.8,420.583,1.232,416.2,1.4,405.93V145.424a10.362,10.362,0,0,1,5.465-9.569C35.827,119.092,199.631,23.884,235.89,3.207,240.774,0.837,246.235.7,253.775,3.7Z"/> <path id="A_복사" data-name="A 복사" fill="#fff" fill-rule="evenodd" d="M54.059,142.81c24.45-14.452,141.735-83.561,177.814-104.887,5.123-3.774,14.08-3.694,20.049-.07L435.1,144.108c6.54,3.684,2.856,5.879-1.261,8.017l-36.825,21.331c-2.837,1.734-5.82,3.149-11.583.156-15.694-9.233-67.99-39.948-67.99-39.948l-98.752,58.371,66.784,39.289c4.067,2.4,3.782,6.6-2.033,9.193l-31.7,18.738c-7.764,5.249-13.6,2.585-17.774.042-34.068-19.884-155.417-90.713-179.9-105.061C49.507,151.835,50,145.18,54.059,142.81Zm90.06,5.95,97.744-58.371,35.268,22.141-97.744,57.364Z"/> <path id="A_복사_2" data-name="A 복사 2" fill="#fff" fill-rule="evenodd" d="M43.04,181.952c37.979,21.655,151.82,86.7,179.436,102.448a15.415,15.415,0,0,1,7.6,13.439c-0.292,37.115-1.379,175.6-1.667,212.245-0.094,7.367-5.236,5.875-8.171,4.227l-36.075-20.993c-3.431-2.067-5.74-3.982-6.061-9.158,0.265-18.955,1.114-79.654,1.114-79.654L79.584,347.7S78.71,400,78.4,422.015c0.16,5.27-.239,10.208-5.536,7.77L34.615,407.974c-3-2.032-6.064-4.918-5.965-10.836,0.329-32.679,1.654-164.479,2.092-208.055C30.434,183.6,34.531,176.27,43.04,181.952Zm37.238,79.631,99.133,55.936-1.782,41.557L79.37,302.642Z"/> <path id="Z_복사" data-name="Z 복사" fill="#fff" fill-rule="evenodd" d="M263.66,284.057L450.08,172.72c2.179-1.135,6.723-.414,6.392,5.363,0,16.067.024,49.176,0.024,49.176l-120.92,188.2L448.93,347.909c2.1-1.3,6.31-2.767,6.559,3.1v40.522c0.1,5.507-.528,9.513-8.007,15.6C415.2,426.36,294.793,498.045,263.214,516.905c-7.665,3.5-8.614-.994-8.446-3.975,0-15.933.194-49.167,0.194-49.167L376.89,274.56,262.578,342.109c-5.706,2.288-6.608-2-6.608-4.261V298.237C255.97,292.418,255.277,288.533,263.66,284.057Z"/> </svg> </div>
-  <div class="headcopy"><h1>쇼파일 생성기 <span class="beta-badge">{{RELEASE_CHANNEL}}</span><span class="version-badge">v{{APP_VERSION}}</span><span class="kr-badge"><span class="kr-flag">🇰🇷</span>MADE IN KOREA</span></h1><div class="sub">AudioAZ &middot; 채널시트 &rarr; DM7 &middot; KLANG &middot; SuperRack</div></div>
+  <div class="headcopy"><h1>쇼파일 생성기 <span class="beta-badge">{{RELEASE_CHANNEL}}</span><span class="version-badge">v{{APP_VERSION}}</span></h1><div class="sub">AudioAZ &middot; 채널시트 &rarr; DM7 &middot; KLANG &middot; SuperRack</div></div>
   <div class="headtools">
-    <button class="templatebtn" onclick="saveTemplate()"><span class="ico">&#11015;</span><span>채널시트 템플릿 다운받기</span><span class="filetype">XLSX</span></button>
-    <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="라이트/다크 전환">&#127769;</button>
+    <button class="templatebtn" onclick="saveTemplate()"><span>채널시트 템플릿 다운받기</span><span class="filetype">XLSX</span></button>
+    <button class="themebtn" id="themebtn" onclick="toggleTheme()" title="라이트/다크 전환"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg></button>
   </div>
 </header>
 <div class="trialbanner" id="trialbanner">
-  <div class="trialicon">&#128269;</div>
-  <div class="trialcopy"><div class="trialtitle">먼저 채널시트 템플릿을 다운로드해 작성해 주세요</div><div class="trialdesc">작성한 채널시트를 이곳에 업로드하면 네이밍·스테레오 페어·플러그인 체인을 미리 확인할 수 있습니다. 온라인은 분석 체험판이며, 실제 DM7·KLANG·SuperRack 쇼파일 생성과 저장은 Mac용 오프라인 생성기에서 진행합니다.</div><div class="trialactions"><a class="exampledownload" href="/download/example">&#128196;&nbsp; 작성 예제 XLSX (Numbers에서 열기 가능)</a></div></div>
-  <a class="trialdownload" href="/download/offline">&#128187;&nbsp; 오프라인 생성기 다운로드 (Mac용)</a>
+  <div class="trialicon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+  <div class="trialcopy"><div class="trialtitle">먼저 채널시트 템플릿을 다운로드해 작성해 주세요</div><div class="trialdesc">작성한 채널시트를 이곳에 업로드하면 네이밍·스테레오 페어·플러그인 체인을 미리 확인할 수 있습니다. 온라인은 분석 체험판이며, 실제 DM7·KLANG·SuperRack 쇼파일 생성과 저장은 Mac용 오프라인 생성기에서 진행합니다.</div><div class="trialactions"><a class="exampledownload" href="/download/example">작성 예제 XLSX (Numbers에서 열기 가능)</a></div></div>
+  <a class="trialdownload" href="/download/offline">오프라인 생성기 다운로드 (Mac용)</a>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -975,8 +975,8 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
   </div>
   <input type="file" id="uploadInput" accept=".numbers,.xlsx" style="display:none" onchange="uploadSheet(this.files[0])">
   <div class="list" id="list"></div>
-  <div class="folderline"><span>&#128193;</span><span id="sheetsdir"></span></div>
-  <div class="folderline"><span>&#128225;</span>
+  <div class="folderline"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span id="sheetsdir"></span></div>
+  <div class="folderline"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M7.8 8.4a6 6 0 0 0 0 7.2M16.2 8.4a6 6 0 0 1 0 7.2M4.9 5.6a10 10 0 0 0 0 12.8M19.1 5.6a10 10 0 0 1 0 12.8"/></svg></span>
     <label style="cursor:pointer;display:flex;align-items:center;gap:6px">
       <input type="checkbox" id="lanchk" onchange="setLan(this.checked)">
       같은 네트워크에서 접속 허용 (아이패드·다른 맥)</label>
@@ -999,7 +999,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
 <div class="grid">
   <div class="out dm7" id="card_dm7">
     <div class="ohead" onclick="toggleOut('dm7')">
-      <div class="oicon">&#127899;</div>
+      <div class="oicon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></svg></div>
       <div><div class="oname">DM7 쇼파일</div><div class="odesc">.dm7f &middot; Reset 베이스</div></div>
       <div class="sw"></div>
     </div>
@@ -1017,7 +1017,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
   </div>
   <div class="out klang" id="card_klang">
     <div class="ohead" onclick="toggleOut('klang')">
-      <div class="oicon">&#127927;</div>
+      <div class="oicon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></svg></div>
       <div><div class="oname">클랑 쇼파일</div><div class="odesc">.KLANGshow &middot; KOS 6</div></div>
       <div class="sw"></div>
     </div>
@@ -1030,7 +1030,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
   </div>
   <div class="out sprk" id="card_sprk">
     <div class="ohead" onclick="toggleOut('sprk')">
-      <div class="oicon">&#127898;</div>
+      <div class="oicon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></svg></div>
       <div><div class="oname">SuperRack 쇼파일</div><div class="odesc">.sprk &middot; Performer &middot; 디폴트 셋 베이스</div></div>
       <div class="sw"></div>
     </div>
@@ -1056,7 +1056,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
 </div>
 <script>
 let curTheme=localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
-function applyTheme(){document.documentElement.dataset.theme=curTheme;const b=document.getElementById('themebtn');if(b)b.innerHTML=curTheme==='dark'?'&#9728;&#65039;':'&#127769;';}
+function applyTheme(){document.documentElement.dataset.theme=curTheme;const b=document.getElementById('themebtn');if(b)b.innerHTML=curTheme==='dark'?'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>':'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg>';}
 function toggleTheme(){curTheme=curTheme==='dark'?'light':'dark';localStorage.setItem('theme',curTheme);applyTheme();}
 document.documentElement.dataset.theme=curTheme;
 document.addEventListener('DOMContentLoaded',applyTheme);
@@ -1086,7 +1086,7 @@ function updateGo(){
   if(isOnline){
     g.disabled=false;
     g.onclick=()=>{window.location.href='/download/offline';};
-    g.innerHTML='&#128187;&nbsp; 실제 쇼파일 생성하기 &mdash; 오프라인 생성기 다운로드 (Mac용)';
+    g.innerHTML='실제 쇼파일 생성하기 &mdash; 오프라인 생성기 다운로드 (Mac용)';
     return;
   }
   const any=st.dm7.enabled||st.klang.enabled||st.sprk.enabled;
@@ -1265,9 +1265,9 @@ async function gen(){
     const res=document.getElementById('result');
     res.style.display='block';
     res.innerHTML=`<div style="font-weight:700"><span class="ok">&#10003;</span> ${esc(r.name)} &mdash; 채널 ${r.channels}개, 페어 ${r.pairs}개</div>`+
-      (r.pending?`<div style="font-size:12px;color:var(--warn);margin-top:6px">&#9203; iCloud 동기화 지연 &mdash; 로컬 사본은 완료, 백그라운드에서 계속 저장돼요</div>`:'')+
+      (r.pending?`<div style="font-size:12px;color:var(--warn);margin-top:6px">iCloud 동기화 지연 &mdash; 로컬 사본은 완료, 백그라운드에서 계속 저장돼요</div>`:'')+
       r.files.map(f=>{const nm=f.path.split('/').pop();const openP=f.synced?f.path:f.staged;
-      return `<div class="rfile"><span>${nm.endsWith('.dm7f')?'&#127899;':nm.endsWith('.sprk')?'&#127898;':'&#127927;'}</span><span class="n">${esc(nm)}${f.synced?'':' <span style="color:var(--warn)">(로컬 사본)</span>'}</span>
+      return `<div class="rfile"><span class="n">${esc(nm)}${f.synced?'':' <span style="color:var(--warn)">(로컬 사본)</span>'}</span>
       ${f.download?`<a class="btn" href="${f.download}" download>다운로드</a>`:`<button class="btn" onclick='fetch("/api/open",{method:"POST",body:JSON.stringify({path:${JSON.stringify(openP)}})})'>폴더에서 보기</button>`}</div>`}).join('');
     res.scrollIntoView({behavior:'smooth'});
   }catch(e){

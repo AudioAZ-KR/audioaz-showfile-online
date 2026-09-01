@@ -1,0 +1,36 @@
+AudioAZ 쇼파일 생성기 — 무료 사용 라이선스
+
+Copyright (c) 2026 오디오에이지 (AudioAZ)
+
+1. 사용권
+  - 본 소프트웨어는 무료로 사용할 수 있습니다 (개인·상업 현장 사용 포함).
+  - 원본 그대로(본 라이선스 포함) 공유하는 것은 허용됩니다.
+  - 수정본 배포, 재판매, 본 소프트웨어를 이용한 유료 서비스 재포장은
+    오디오에이지의 서면 동의 없이 금지됩니다.
+
+2. 무보증 · 책임 제한
+  - 본 소프트웨어는 "있는 그대로(AS IS)" 제공되며 어떠한 보증도 하지 않습니다.
+  - 생성된 쇼파일(.dm7f / .KLANGshow / .sprk)은 반드시 해당 콘솔·소프트웨어에서
+    열어 패치·레벨·라우팅을 검증한 후 실제 공연에 사용하십시오.
+  - 본 도구 사용으로 인한 어떠한 손해(공연 사고, 행사 중단, 데이터 손실 등)에
+    대해서도 오디오에이지는 책임을 지지 않습니다.
+
+3. 상표 · 비제휴 고지
+  - 본 소프트웨어는 오디오에이지가 독자 제작한 비공식 도구입니다.
+    Yamaha Corporation, KLANG:technologies GmbH, Waves Audio Ltd.와 무관하며
+    이들로부터 승인·보증받지 않았습니다.
+  - Yamaha, DM7, KLANG, Waves, SuperRack은 각 회사의 상표이며,
+    호환 파일 형식을 지칭하기 위한 목적으로만 사용됩니다.
+  - 포함된 베이스 파일(Reset.dm7f, AudioAZTest.KLANGshow, sprk_base.sprk)은
+    오디오에이지가 해당 정품 소프트웨어에서 직접 작성·저장한 자체 문서이며,
+    각 제조사의 소프트웨어 구성요소를 포함하지 않습니다.
+
+4. 제3자 오픈소스 소프트웨어 (모두 허용적 라이선스)
+  - numbers-parser (MIT) · openpyxl (MIT) · compact-json (MIT)
+  - lxml (BSD) · numpy (BSD) · protobuf (BSD-3-Clause)
+  - Pillow (MIT-CMU) · charset-normalizer (MIT) · cramjam (MIT)
+  - python-dateutil (Apache-2.0/BSD) · wcwidth (MIT)
+  - Python (PSF License) · PyInstaller (GPL-2.0, 부트로더 예외조항 적용)
+
+오디오에이지 (AudioAZ)
+음향감독 김형준 · khjun99@naver.com · blog.naver.com/audioaz

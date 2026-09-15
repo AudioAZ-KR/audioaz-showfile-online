@@ -23,7 +23,7 @@ from urllib.parse import quote, unquote
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import sheet2spec, dm7_gen, klang_gen, sprk_gen
+import sheet2spec, dm7_gen, klang_gen, sprk_gen, x32_gen
 from run_pipeline import next_version
 
 FROZEN = getattr(sys, 'frozen', False)
@@ -237,6 +237,7 @@ DEFAULT_CFG = {
     'dm7_out_dir': os.path.expanduser('~/Desktop/쇼파일/DM7'),
     'klang_out_dir': os.path.expanduser('~/Desktop/쇼파일/KLANG'),
     'sprk_out_dir': os.path.expanduser('~/Desktop/쇼파일/SuperRack'),
+    'x32_out_dir': os.path.expanduser('~/Desktop/쇼파일/X32'),
     'klang_presets_copy': True,
     'lan_mode': False,
 }
@@ -433,10 +434,10 @@ def generate(req):
         spec.pop('dca_names', None)
 
     c = config()
-    dm7_dir, klang_dir, sprk_dir = c['dm7_out_dir'], c['klang_out_dir'], c['sprk_out_dir']
+    dm7_dir, klang_dir, sprk_dir, x32_dir = c['dm7_out_dir'], c['klang_out_dir'], c['sprk_out_dir'], c.get('x32_out_dir', os.path.expanduser('~/Desktop/쇼파일/X32'))
     os.makedirs(STAGE, exist_ok=True)
-    spec['name'] = pick_version(spec['name'], [dm7_dir, klang_dir, sprk_dir, STAGE],
-                                ['.dm7f', '.KLANGshow', '.sprk'])
+    spec['name'] = pick_version(spec['name'], [dm7_dir, klang_dir, sprk_dir, x32_dir, STAGE],
+                                ['.dm7f', '.KLANGshow', '.sprk', '.x32'])
     spec['snapshot'] = (spec.get('ascii_name') or spec['name']).replace('_', '')[:10]
     copies = []   # (staged_path, dst_dir)
 
@@ -494,6 +495,18 @@ def generate(req):
         except (RuntimeError, AssertionError) as e:
             raise RuntimeError(f'SuperRack 생성 실패: {e}')
         copies.append((out, sprk_dir))
+
+    x = req.get('x32') or {}
+    if x.get('enabled'):
+        s = copy.deepcopy(spec)
+        sp = '/tmp/showfile_spec_x32.json'
+        json.dump(s, open(sp, 'w'), ensure_ascii=False)
+        out = os.path.join(STAGE, spec['name'] + '.x32')
+        try:
+            x32_gen.generate(sp, out)
+        except (RuntimeError, AssertionError) as e:
+            raise RuntimeError(f'X32 생성 실패: {e}')
+        copies.append((out, x32_dir))
 
     # 백그라운드 iCloud 배포 — 데몬이 멈춰 있어도 앱은 즉시 응답
     done = set()
@@ -778,7 +791,8 @@ class H(BaseHTTPRequestHandler):
                 prompts = {'sheets_dir': '채널시트 폴더를 선택하세요',
                            'dm7_out_dir': 'DM7 쇼파일 저장 폴더를 선택하세요',
                            'klang_out_dir': '클랑 쇼파일 저장 폴더를 선택하세요',
-                           'sprk_out_dir': 'SuperRack 쇼파일 저장 폴더를 선택하세요'}
+                           'sprk_out_dir': 'SuperRack 쇼파일 저장 폴더를 선택하세요',
+                           'x32_out_dir': 'X32 쇼파일 저장 폴더를 선택하세요'}
                 p = choose_folder(prompts[key])
                 if p:
                     c = config()
@@ -1034,10 +1048,21 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
       <div class="sw"></div>
     </div>
     <div class="obody sprko">
-      <div class="optt">저장 위치</div>
+      <div class="oppt">저장 위치</div>
       <div class="saverow"><span class="p" id="sprkdir"></span><button class="btn" onclick="chooseDir('sprk_out_dir')">변경</button></div>
-      <div class="optt">세부 옵션</div>
+      <div class="oppt">세부 옵션</div>
       <div id="sprkopts"></div>
+    </div>
+  </div>
+  <div class="out x32" id="card_x32">
+    <div class="ohead" onclick="toggleOut('x32')">
+      <div class="oicon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></svg></div>
+      <div><div class="oname">X32 쇼파일</div><div class="odesc">.x32 &middot; Behringer</div></div>
+      <div class="sw"></div>
+    </div>
+    <div class="obody x32o">
+      <div class="oppt">저장 위치</div>
+      <div class="saverow"><span class="p" id="x32dir"></span><button class="btn" onclick="chooseDir('x32_out_dir')">변경</button></div>
     </div>
   </div>
 </div>
@@ -1064,7 +1089,7 @@ const KLANGOPTS=[["links","스테레오 링크",""],["auto_group","자동 그룹
 const SPRKOPTS=[["auto_chain","플러그인 체인 자동 배치","보컬/악기별 · 표에서 개별 수정"]];
 const CHAIN_LABELS={auto:"자동",vocal:"보컬 체인",inst:"악기 체인",none:"빈 랙"};
 let sheets=[],sel=null,busy=false,review=null,edits={},chains={},confirmed={},isOnline=false;
-const st={dm7:{enabled:false},klang:{enabled:false},sprk:{enabled:false}};
+const st={dm7:{enabled:false},klang:{enabled:false},sprk:{enabled:false},x32:{enabled:false}};
 DM7OPTS.forEach(o=>st.dm7[o[0]]=true);KLANGOPTS.forEach(o=>st.klang[o[0]]=true);SPRKOPTS.forEach(o=>st.sprk[o[0]]=true);
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -1088,7 +1113,7 @@ function updateGo(){
     g.innerHTML='실제 쇼파일 생성하기 &mdash; 오프라인 생성기 다운로드 (Mac용)';
     return;
   }
-  const any=st.dm7.enabled||st.klang.enabled||st.sprk.enabled;
+  const any=st.dm7.enabled||st.klang.enabled||st.sprk.enabled||st.x32.enabled;
   const u=unresolved();
   g.disabled=!sel||!any||busy||!review||u>0;
   g.innerHTML=busy?'<span class="spin"></span>생성 중...':

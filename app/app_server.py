@@ -55,6 +55,7 @@ OFFLINE_APP_PATH = os.path.join(RES, 'base', '쇼파일 생성기_오프라인_A
 EXAMPLE_SHEET_PATH = os.path.join(RES, 'base', '250927_오펄스_작성예제.xlsx')
 PRESETS = os.path.expanduser('~/Library/Containers/com.klang.klangapp2/Data/Library/KLANGtechnologies/Presets')
 PORT = int(os.environ.get('PORT', '8787'))
+_PORT0 = PORT                 # 기본 포트 — 다른 앱이 쓰고 있으면 main()에서 빈 포트로 옮김
 STAGE = '/tmp/showfile_out'   # 로컬 스테이징 — iCloud가 느려도 생성은 즉시 완료
 UPLOADS = '/tmp/showfile_uploads'
 
@@ -666,13 +667,14 @@ class H(BaseHTTPRequestHandler):
             with open(EXAMPLE_SHEET_PATH, 'rb') as f:
                 shutil.copyfileobj(f, self.wfile)
         elif self.path == '/api/version':
-            self._json({'version': APP_VERSION,
+            self._json({'app': 'showfile', 'version': APP_VERSION,
                         'channel': RELEASE_CHANNEL.lower()})
         elif self.path == '/api/state':
             c = config()
             ip = lan_ip() if c.get('lan_mode') else None
             self._json({'sheets': scan_sheets(), 'config': c,
                         'online': ONLINE,
+                        'port': PORT, 'port_moved': PORT != _PORT0,
                         'lan': {'on': bool(c.get('lan_mode')),
                                 'url': f'http://{ip}:{PORT}' if ip else None},
                         'dm7_base': {'custom': dm7_base_path() is not None,
@@ -989,6 +991,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
   <input type="file" id="uploadInput" accept=".numbers,.xlsx" style="display:none" onchange="uploadSheet(this.files[0])">
   <div class="list" id="list"></div>
   <div class="folderline"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span id="sheetsdir"></span></div>
+  <div class="folderline"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><span id="localurl"></span></div>
   <div class="folderline"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M7.8 8.4a6 6 0 0 0 0 7.2M16.2 8.4a6 6 0 0 1 0 7.2M4.9 5.6a10 10 0 0 0 0 12.8M19.1 5.6a10 10 0 0 1 0 12.8"/></svg></span>
     <label style="cursor:pointer;display:flex;align-items:center;gap:6px">
       <input type="checkbox" id="lanchk" onchange="setLan(this.checked)">
@@ -1211,6 +1214,8 @@ async function load(){
   }
   if(r.lan){document.getElementById('lanchk').checked=r.lan.on;
     document.getElementById('lanurl').textContent=r.lan.url||'';}
+  if(r.port)document.getElementById('localurl').textContent=
+    'http://127.0.0.1:'+r.port+(r.port_moved?' (기본 포트는 다른 앱이 사용 중이라 옮겼습니다)':'');
   if(r.dm7_base)renderBase(r.dm7_base.custom, r.dm7_base.name);
 }
 async function uploadSheet(file){
@@ -1311,18 +1316,50 @@ def _open_browser():
         subprocess.run(['open', '-a', 'Safari', url], capture_output=True)
 
 
-def main():
+def _port_busy(port):
+    s = socket.socket()
+    s.settimeout(0.3)
     try:
-        s = socket.socket()
-        s.settimeout(0.3)
-        if s.connect_ex(('127.0.0.1', PORT)) == 0:
-            s.close()
+        return s.connect_ex(('127.0.0.1', port)) == 0
+    except Exception:
+        return False
+    finally:
+        s.close()
+
+
+def _showfile_on(port):
+    """포트에 떠 있는 게 이 앱인지 확인 — 같은 포트를 쓰는 다른 로컬 앱이면 False."""
+    try:
+        import urllib.request
+        with urllib.request.urlopen(f'http://127.0.0.1:{port}/api/version', timeout=0.8) as r:
+            j = json.loads(r.read().decode())
+        return j.get('app') == 'showfile' or ('version' in j and 'channel' in j)
+    except Exception:
+        return False
+
+
+def _free_port(start):
+    for p in range(start + 1, start + 50):
+        if not _port_busy(p):
+            return p
+    s = socket.socket()
+    s.bind(('127.0.0.1', 0))
+    p = s.getsockname()[1]
+    s.close()
+    return p
+
+
+def main():
+    global PORT
+    if _port_busy(PORT):
+        if _showfile_on(PORT):
             if FROZEN:
                 _open_browser()
             return  # 이미 실행 중
-        s.close()
-    except Exception:
-        pass
+        new = _free_port(PORT)
+        print(f'포트 {PORT}는 다른 앱이 사용 중 → {new}로 실행', file=sys.stderr)
+        PORT = new
+    print(f'쇼파일 생성기 http://127.0.0.1:{PORT}', file=sys.stderr)
     if FROZEN:
         threading.Timer(0.7, _open_browser).start()
     while True:

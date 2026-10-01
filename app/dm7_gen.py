@@ -12,6 +12,9 @@ MTRX_DELTA = 31048   # MIX1 이름 → MTRX1 이름 오프셋 (펌웨어 상수,
 DCA_DELTA = 9188     # MTRX 앵커 → DCA 테이블 오프셋 (실측)
 # 펌웨어 V2.0부터 확장자가 .dmxf — 컨테이너·채널~DCA 레이아웃은 V1.74와 동일(0x120 시프트만), 실측 261001
 BASE_FILES = {'1': 'Reset.dm7f', '2': 'Reset.dmxf'}
+# 인풋 채널 → MIX 센드: STEREO 앵커 +1325 부터 7바이트 × 48 (mms_Mixing.xml ToMix)
+#   +3~4 Level(int16 LE, 0.01dB, -32768 = -inf) / +6 bit0 = On
+SND_MIX, SND_STEP, SND_LEVEL, SND_ON = 1325, 7, 3, 6
 
 
 def fw_major(path):
@@ -200,6 +203,20 @@ def patch_blob(raw, spec, is_current):
         if a in mixpos and b in mixpos:
             raw[mixpos[a] - 3:mixpos[a]] = b'\x01\x80\x01'
             raw[mixpos[b] - 3:mixpos[b]] = b'\x01\x01\x01'
+
+    # IEM 믹스: 시트의 인풋 채널(링크 페어 상대 포함) 센드를 지정 레벨·On 으로
+    lvl = spec.get('iem_send_db')
+    if lvl is not None:
+        chs = set(have) | {x for p in spec.get('pairs', []) if set(p) & have for x in p}
+        val = struct.pack('<h', int(round(lvl * 100)))
+        for n, mx in spec.get('mixes', {}).items():
+            n = int(n)
+            if not mx.get('iem') or not 1 <= n <= 48:
+                continue
+            for ch in chs:
+                o = ms[ch - 1] + SND_MIX + (n - 1) * SND_STEP
+                raw[o + SND_LEVEL:o + SND_LEVEL + 2] = val
+                raw[o + SND_ON] |= 1
 
     # MATRIX: 고정 스트라이드 0x206 (커스텀/공장/델타 앵커 폴백)
     base = _matrix_base(raw, ms, mixpos)

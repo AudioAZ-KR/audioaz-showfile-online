@@ -52,7 +52,7 @@ SPRK_BASE = os.path.join(RES, 'base', 'sprk_base.sprk')
 TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트 템플릿.numbers')
 ONLINE_TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트_템플릿.xlsx')
 # 맥 앱 배포본은 Developer ID 서명·공증된 .pkg만 (GitHub Releases, 홈페이지 다운로드 페이지와 동일 링크)
-OFFLINE_PKG_VERSION = '0.8.0'
+OFFLINE_PKG_VERSION = '0.9.0'
 OFFLINE_PKG_URL = ('https://github.com/AudioAZ-KR/audioazpro-site/releases/download/'
                    f'showfile-v{OFFLINE_PKG_VERSION}/ShowfileGenerator-v{OFFLINE_PKG_VERSION}.pkg')
 EXAMPLE_SHEET_PATH = os.path.join(RES, 'base', '250927_오펄스_작성예제.xlsx')
@@ -456,6 +456,8 @@ def generate(req):
             s.pop('dca_names', None)
         if not d.get('mix', True):
             s['mixes'], s['mix_pairs'] = {}, []
+        if d.get('iem_send', True):
+            s['iem_send_db'] = -20   # IEM 믹스가 있을 때만 적용됨
         if not d.get('matrix', True):
             s['matrix'] = {}
         sp = '/tmp/showfile_spec_dm7.json'
@@ -1124,7 +1126,7 @@ function applyTheme(){document.documentElement.dataset.theme=curTheme;const b=do
 function toggleTheme(){curTheme=curTheme==='dark'?'light':'dark';localStorage.setItem('theme',curTheme);applyTheme();}
 document.documentElement.dataset.theme=curTheme;
 document.addEventListener('DOMContentLoaded',applyTheme);
-const DM7OPTS=[["links","스테레오 링크","시트 페어 + OH 관례"],["dca","DCA 어사인","OnAir/inst/Sings/Drums/AMBI"],["mix","믹스 버스 네이밍·링크","IEM 페어 + Pan Link"],["matrix","매트릭스 네이밍","TOP/SUB/Main"]];
+const DM7OPTS=[["links","스테레오 링크","시트 페어 + OH 관례"],["dca","DCA 어사인","OnAir/inst/Sings/Drums/AMBI"],["mix","믹스 버스 네이밍·링크","IEM 페어 + Pan Link"],["iem_send","IEM 센드 -20dB","믹스 이름에 IEM 있을 때만"],["matrix","매트릭스 네이밍","TOP/SUB/Main"]];
 const KLANGOPTS=[["links","스테레오 링크",""],["auto_group","자동 그룹","최대 8개 + 정렬"],["color_match","채널 색상 = 그룹 색",""],["panning","패닝 템플릿","드럼 이미지 + 스테레오 폭"],["i3d","i3D 모드","전 믹스"],["gain_minus15","인풋 페이더 -15dB",""],["hide_unused","미사용 채널 숨김",""],["presets_copy","KLANG 앱에 자동 등록","프리셋 폴더 복사"]];
 const SPRKOPTS=[["auto_chain","플러그인 체인 자동 배치","보컬/악기별 · 표에서 개별 수정"]];
 const CHAIN_LABELS={auto:"자동",vocal:"보컬 체인",inst:"악기 체인",none:"빈 랙"};

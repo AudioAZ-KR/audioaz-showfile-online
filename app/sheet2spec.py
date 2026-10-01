@@ -319,18 +319,24 @@ def parse_outputs(outputs):
         nm, dev = mix_rows[n]
         if not nm:
             continue
-        if 'iem' in (dev + ' ' + nm).lower() and not is_ascii(nm):
+        is_iem = 'iem' in (dev + ' ' + nm).lower()
+        if is_iem and not is_ascii(nm):
             if n in mix_paired and n - 1 in mix_rows and mix_rows[n - 1][0] == nm:
                 pass                                          # 페어 두 번째는 같은 라벨 재사용
             else:
                 iem_k += 1
             nm = f'IEM {iem_k}'
         mixes[str(n)] = {'name': nm[:12]}
+        if is_iem:
+            mixes[str(n)]['iem'] = True
     # IEM 페어 두 번째 믹스 이름 동기화
     for a, b in mix_pairs:
         if str(a) in mixes and (str(b) not in mixes or mixes[str(b)]['name'] != mixes[str(a)]['name']):
             if str(b) not in mixes or mix_rows.get(b, ['', ''])[0] in ('', mix_rows.get(a, ['', ''])[0]):
                 mixes[str(b)] = {'name': mixes[str(a)]['name']}
+    for a, b in mix_pairs:                                # IEM 페어는 양쪽 모두 IEM
+        if str(a) in mixes and str(b) in mixes and (mixes[str(a)].get('iem') or mixes[str(b)].get('iem')):
+            mixes[str(a)]['iem'] = mixes[str(b)]['iem'] = True
 
     matrix = {}
     mtx_paired = {}

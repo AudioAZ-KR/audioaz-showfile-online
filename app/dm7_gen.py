@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""DM7 쇼파일 생성기 — 채널시트 스펙(JSON) → .dm7f
+"""DM7 쇼파일 생성기 — 채널시트 스펙(JSON) → .dmxf(펌웨어 V2.0~) / .dm7f(V1.x)
 2026-07-21 리버싱 결과 기반 (콘솔 실기 검증 완료).
-사용: python3 dm7_gen.py spec.json 출력경로.dm7f [베이스.dm7f]
+사용: python3 dm7_gen.py spec.json 출력경로 [베이스]  — 출력 확장자는 베이스 펌웨어와 맞출 것(out_ext)
 """
 import zlib, re, uuid, struct, json, sys, os
 
@@ -10,6 +10,28 @@ COLOR_RE = re.compile(rb'(Blue|Orange|Red|Yellow|Green|Purple|Pink|White)\x00')
 VALID_FLAGS = {b'\x00\x00\x00', b'\x01\x80\x01', b'\x01\x01\x01'}
 MTRX_DELTA = 31048   # MIX1 이름 → MTRX1 이름 오프셋 (펌웨어 상수, 실측)
 DCA_DELTA = 9188     # MTRX 앵커 → DCA 테이블 오프셋 (실측)
+# 펌웨어 V2.0부터 확장자가 .dmxf — 컨테이너·채널~DCA 레이아웃은 V1.74와 동일(0x120 시프트만), 실측 261001
+BASE_FILES = {'1': 'Reset.dm7f', '2': 'Reset.dmxf'}
+
+
+def fw_major(path):
+    """파일 헤더의 펌웨어 메이저 버전 (0x34: 'V' major minor 00). 못 읽으면 1."""
+    try:
+        with open(path, 'rb') as f:
+            h = f.read(0x38)
+    except OSError:
+        return 1
+    return h[0x35] if len(h) >= 0x36 and h[0x34:0x35] == b'V' and h[0x35] else 1
+
+
+def out_ext(base_path):
+    """베이스의 펌웨어에 맞는 출력 확장자 — 콘솔/DM Editor는 버전과 확장자가 맞아야 연다."""
+    return '.dmxf' if fw_major(base_path) >= 2 else '.dm7f'
+
+
+def default_base(fw='2'):
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'base',
+                        BASE_FILES.get(str(fw), BASE_FILES['2']))
 
 
 def _mix_positions(raw, ms):
@@ -65,9 +87,10 @@ def validate_base(path):
         data = open(path, 'rb').read()
     except OSError as e:
         return False, f'파일을 읽을 수 없습니다: {e}', {}
-    info = {'sections': 0, 'channel_sections': 0, 'mix': False, 'matrix': False, 'dca': False}
+    info = {'sections': 0, 'channel_sections': 0, 'mix': False, 'matrix': False, 'dca': False,
+            'fw': fw_major(path), 'ext': out_ext(path)}
     if b'#FILE' not in data or b'#END' not in data:
-        return False, '.dm7f 형식이 아닙니다 (DM7 콘솔에서 저장한 파일인지 확인해 주세요)', info
+        return False, '.dm7f/.dmxf 형식이 아닙니다 (DM7 콘솔에서 저장한 파일인지 확인해 주세요)', info
     try:
         secs = find_sections(data)
     except Exception:
@@ -196,7 +219,7 @@ def patch_blob(raw, spec, is_current):
 def generate(spec_path, out_path, base_path=None):
     spec = json.load(open(spec_path))
     if base_path is None:
-        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'base', 'Reset.dm7f')
+        base_path = default_base()
     src = open(base_path, 'rb').read()
     secs = find_sections(src)
     tail = src[src.rfind(b'#END'):]

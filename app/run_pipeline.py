@@ -39,15 +39,16 @@ def main():
     os.makedirs(klang_dir, exist_ok=True)
 
     spec = sheet2spec.build_spec(sheet)
-    spec['name'] = next_version(spec['name'], [dm7_dir, klang_dir], ['.dm7f', '.KLANGshow'])
+    spec['name'] = next_version(spec['name'], [dm7_dir, klang_dir], ['.dmxf', '.dm7f', '.KLANGshow'])
     spec['snapshot'] = (spec.get('ascii_name') or spec['name']).replace('_', '')[:10]
     spec_path = '/tmp/showfile_spec.json'
     json.dump(spec, open(spec_path, 'w'), ensure_ascii=False)
 
     made = []
     if want_dm7:
-        out = os.path.join(dm7_dir, spec['name'] + '.dm7f')
-        dm7_gen.generate(spec_path, out)
+        base = dm7_gen.default_base('2')
+        out = os.path.join(dm7_dir, spec['name'] + dm7_gen.out_ext(base))
+        dm7_gen.generate(spec_path, out, base)
         made.append(out)
     if want_klang:
         out = os.path.join(klang_dir, spec['name'] + '.KLANGshow')

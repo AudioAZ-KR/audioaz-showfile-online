@@ -51,7 +51,10 @@ VOCAB_PATH = os.path.join(RES, 'naming_vocab.json')
 SPRK_BASE = os.path.join(RES, 'base', 'sprk_base.sprk')
 TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트 템플릿.numbers')
 ONLINE_TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트_템플릿.xlsx')
-OFFLINE_APP_PATH = os.path.join(RES, 'base', '쇼파일 생성기_오프라인_AppleSilicon.zip')
+# 맥 앱 배포본은 Developer ID 서명·공증된 .pkg만 (GitHub Releases, 홈페이지 다운로드 페이지와 동일 링크)
+OFFLINE_PKG_VERSION = '0.6.6'
+OFFLINE_PKG_URL = ('https://github.com/AudioAZ-KR/audioazpro-site/releases/download/'
+                   f'showfile-v{OFFLINE_PKG_VERSION}/ShowfileGenerator-v{OFFLINE_PKG_VERSION}.pkg')
 EXAMPLE_SHEET_PATH = os.path.join(RES, 'base', '250927_오펄스_작성예제.xlsx')
 PRESETS = os.path.expanduser('~/Library/Containers/com.klang.klangapp2/Data/Library/KLANGtechnologies/Presets')
 PORT = int(os.environ.get('PORT', '8787'))
@@ -438,7 +441,7 @@ def generate(req):
     dm7_dir, klang_dir, sprk_dir, x32_dir = c['dm7_out_dir'], c['klang_out_dir'], c['sprk_out_dir'], c.get('x32_out_dir', os.path.expanduser('~/Desktop/쇼파일/X32'))
     os.makedirs(STAGE, exist_ok=True)
     spec['name'] = pick_version(spec['name'], [dm7_dir, klang_dir, sprk_dir, x32_dir, STAGE],
-                                ['.dm7f', '.KLANGshow', '.sprk', '.x32'])
+                                ['.dmxf', '.dm7f', '.KLANGshow', '.sprk', '.x32'])
     spec['snapshot'] = (spec.get('ascii_name') or spec['name']).replace('_', '')[:10]
     copies = []   # (staged_path, dst_dir)
 
@@ -457,8 +460,10 @@ def generate(req):
             s['matrix'] = {}
         sp = '/tmp/showfile_spec_dm7.json'
         json.dump(s, open(sp, 'w'), ensure_ascii=False)
-        out = os.path.join(STAGE, spec['name'] + '.dm7f')
-        dm7_gen.generate(sp, out, dm7_base_path())
+        # 사용자 리셋 쇼파일이 있으면 그 펌웨어를 따르고, 없으면 선택한 펌웨어의 AudioAZ 기본 쇼파일
+        base = dm7_base_path() or dm7_gen.default_base(d.get('fw', '2'))
+        out = os.path.join(STAGE, spec['name'] + dm7_gen.out_ext(base))
+        dm7_gen.generate(sp, out, base)
         copies.append((out, dm7_dir))
 
     k = req.get('klang') or {}
@@ -637,19 +642,10 @@ class H(BaseHTTPRequestHandler):
             with open(template_path, 'rb') as f:
                 shutil.copyfileobj(f, self.wfile)
         elif self.path == '/download/offline':
-            if not os.path.isfile(OFFLINE_APP_PATH):
-                self._json({'error': '오프라인 앱 파일을 찾을 수 없습니다.'}, 404)
-                return
-            filename = f'쇼파일_생성기_오프라인_v{APP_VERSION}_AppleSilicon.zip'
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/zip')
-            self.send_header('Content-Length', str(os.path.getsize(OFFLINE_APP_PATH)))
-            self.send_header('Content-Disposition',
-                             f"attachment; filename*=UTF-8''{quote(filename)}")
+            self.send_response(302)
+            self.send_header('Location', OFFLINE_PKG_URL)
             self.send_header('Cache-Control', 'no-store')
             self.end_headers()
-            with open(OFFLINE_APP_PATH, 'rb') as f:
-                shutil.copyfileobj(f, self.wfile)
         elif self.path == '/download/example':
             if not os.path.isfile(EXAMPLE_SHEET_PATH):
                 self._json({'error': '예제 채널시트 파일을 찾을 수 없습니다.'}, 404)
@@ -678,7 +674,8 @@ class H(BaseHTTPRequestHandler):
                         'lan': {'on': bool(c.get('lan_mode')),
                                 'url': f'http://{ip}:{PORT}' if ip else None},
                         'dm7_base': {'custom': dm7_base_path() is not None,
-                                     'name': c.get('dm7_base_name', '')}})
+                                     'name': c.get('dm7_base_name', ''),
+                                     'fw': dm7_gen.fw_major(CUSTOM_DM7_BASE) if dm7_base_path() else None}})
         elif self.path == '/terms':
             try:
                 md = open(os.path.join(RES, 'base', 'TERMS.md'), encoding='utf-8').read()
@@ -756,8 +753,8 @@ class H(BaseHTTPRequestHandler):
                              'CONTENT_TYPE': self.headers.get('Content-Type', '')})
                 item = form['base']
                 filename = os.path.basename(item.filename or '')
-                if not filename.lower().endswith('.dm7f'):
-                    self._json({'error': '.dm7f 파일만 업로드할 수 있습니다.'}, 400)
+                if not filename.lower().endswith(('.dm7f', '.dmxf')):
+                    self._json({'error': '.dmxf 또는 .dm7f 파일만 업로드할 수 있습니다.'}, 400)
                     return
                 tmp = CUSTOM_DM7_BASE + '.tmp'
                 os.makedirs(os.path.dirname(tmp), exist_ok=True)
@@ -910,6 +907,14 @@ input[type=text]:focus{border-color:var(--tx2)}
 .saverow{display:flex;align-items:center;gap:8px;background:var(--field);border:1px solid var(--line);border-radius:3px;padding:6px 10px;margin-bottom:10px}
 .saverow .p{flex:1;font:500 11.5px/1.4 ui-monospace,"SF Mono",Menlo,monospace;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .saverow .btn{height:26px;padding:0 9px;font-size:11.5px}
+.fwseg{display:flex;border:1px solid var(--line2);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.fwseg button{flex:1;height:30px;background:transparent;border:0;border-right:1px solid var(--line2);color:var(--tx2);font-size:12.5px;font-weight:600;cursor:pointer;transition:.12s}
+.fwseg button:last-child{border-right:0}
+.fwseg button span{margin-left:7px;font:500 11px/1 ui-monospace,"SF Mono",Menlo,monospace;opacity:.75}
+.fwseg button.on{background:var(--acc);color:var(--acc-tx)}
+.fwseg button:disabled{cursor:default;opacity:.55}
+.fwseg button.on:disabled{opacity:1}
+.fwnote{font-size:11.5px;color:var(--tx2);margin-bottom:10px;min-height:14px}
 .optt{font:600 10.5px/1 ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--step);margin:12px 0 6px}
 .opt{display:flex;align-items:center;gap:10px;padding:6px 4px;cursor:pointer;border-radius:3px;font-size:13.5px}
 .opt:hover{background:var(--panel2)}
@@ -977,7 +982,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
 <div class="trialbanner" id="trialbanner">
   <div class="trialicon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
   <div class="trialcopy"><div class="trialtitle">온라인 미리보기</div><div class="trialdesc">채널시트를 업로드하면 네이밍·스테레오 페어·플러그인 체인을 검토합니다. 쇼파일 생성·저장은 Mac 앱에서 진행합니다.</div><div class="trialactions"><a class="exampledownload" href="/download/example">작성 예제 XLSX (Numbers에서 열기 가능)</a></div></div>
-  <a class="trialdownload" href="/download/offline">Mac 앱 다운로드</a>
+  <a class="trialdownload" href="/download/offline" title="Apple 서명·공증된 .pkg 설치 파일 (Apple Silicon)">Mac 앱 다운로드 (.pkg)</a>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1016,17 +1021,23 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
   <div class="out dm7" id="card_dm7">
     <div class="ohead" onclick="toggleOut('dm7')">
       <div class="oicon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></svg></div>
-      <div><div class="oname">DM7 쇼파일</div><div class="odesc">.dm7f &middot; Reset 베이스</div></div>
+      <div><div class="oname">DM7 쇼파일</div><div class="odesc">.dmxf / .dm7f &middot; Reset 베이스</div></div>
       <div class="sw"></div>
     </div>
     <div class="obody dm7o">
       <div class="optt">저장 위치</div>
       <div class="saverow"><span class="p" id="dm7dir"></span><button class="btn" onclick="chooseDir('dm7_out_dir')">변경</button></div>
+      <div class="optt">콘솔 펌웨어</div>
+      <div class="fwseg" id="fwseg">
+        <button type="button" data-fw="2" onclick="setFw('2')">V2.0 이상<span>.dmxf</span></button>
+        <button type="button" data-fw="1" onclick="setFw('1')">V1.x<span>.dm7f</span></button>
+      </div>
+      <div class="fwnote" id="fwnote"></div>
       <div class="optt">리셋 쇼파일 (베이스)</div>
       <div class="saverow"><span class="p" id="dm7base">AudioAZ 기본 쇼파일</span>
         <button class="btn" onclick="document.getElementById('basefile').click()">내 리셋 쇼파일 업로드</button>
         <button class="btn" id="baseresetbtn" style="display:none" onclick="resetBase()">기본으로</button>
-        <input type="file" id="basefile" accept=".dm7f" style="display:none" onchange="uploadBase(this)"></div>
+        <input type="file" id="basefile" accept=".dmxf,.dm7f" style="display:none" onchange="uploadBase(this)"></div>
       <div class="optt">세부 옵션</div>
       <div id="dm7opts"></div>
     </div>
@@ -1216,7 +1227,7 @@ async function load(){
     document.getElementById('lanurl').textContent=r.lan.url||'';}
   if(r.port)document.getElementById('localurl').textContent=
     'http://127.0.0.1:'+r.port+(r.port_moved?' (기본 포트는 다른 앱이 사용 중이라 옮겼습니다)':'');
-  if(r.dm7_base)renderBase(r.dm7_base.custom, r.dm7_base.name);
+  if(r.dm7_base)renderBase(r.dm7_base.custom, r.dm7_base.name, r.dm7_base.fw);else renderFw();
 }
 async function uploadSheet(file){
   if(!file)return;
@@ -1229,16 +1240,28 @@ async function uploadSheet(file){
   }catch(e){showToast(e.message);}
   busy=false;updateGo();
 }
-function renderBase(custom, name){
+let customFw=null;
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+st.dm7.fw=lsGet('dm7fw')==='1'?'1':'2';
+function setFw(v){st.dm7.fw=v;try{localStorage.setItem('dm7fw',v)}catch(e){}renderFw();}
+function renderFw(){
+  const eff=customFw?(customFw>=2?'2':'1'):st.dm7.fw;
+  document.querySelectorAll('#fwseg button').forEach(b=>{b.classList.toggle('on',b.dataset.fw===eff);b.disabled=!!customFw;});
+  document.getElementById('fwnote').textContent=customFw
+    ?'업로드한 리셋 쇼파일의 펌웨어(V'+customFw+'.x)를 따라 '+(eff==='2'?'.dmxf':'.dm7f')+'로 생성합니다'
+    :(eff==='2'?'펌웨어 V2.0 이상 콘솔·DM Editor용 (.dmxf)':'펌웨어 V1.x 콘솔용 (.dm7f) — V2.0 콘솔에서는 V2.0 이상을 선택하세요');
+}
+function renderBase(custom, name, fw){
   document.getElementById('dm7base').textContent=custom?('사용자 기본 쇼파일: '+name):'AudioAZ 기본 쇼파일';
   document.getElementById('baseresetbtn').style.display=custom?'':'none';
+  customFw=custom?(fw||1):null;renderFw();
 }
 async function uploadBase(inp){
   const f=inp.files[0]; if(!f)return; inp.value='';
   const fd=new FormData(); fd.append('base', f);
   const r=await (await fetch('/api/upload_base',{method:'POST',body:fd})).json();
   if(r.error){alert('리셋 쇼파일 업로드 실패: '+r.error);return;}
-  renderBase(true, r.name);
+  renderBase(true, r.name, r.info&&r.info.fw);
 }
 async function resetBase(){
   await fetch('/api/reset_base',{method:'POST',body:'{}'});

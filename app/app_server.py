@@ -52,7 +52,7 @@ SPRK_BASE = os.path.join(RES, 'base', 'sprk_base.sprk')
 TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트 템플릿.numbers')
 ONLINE_TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트_템플릿.xlsx')
 # 맥 앱 배포본은 Developer ID 서명·공증된 .pkg만 (GitHub Releases, 홈페이지 다운로드 페이지와 동일 링크)
-OFFLINE_PKG_VERSION = '0.7.0'
+OFFLINE_PKG_VERSION = '0.8.0'
 OFFLINE_PKG_URL = ('https://github.com/AudioAZ-KR/audioazpro-site/releases/download/'
                    f'showfile-v{OFFLINE_PKG_VERSION}/ShowfileGenerator-v{OFFLINE_PKG_VERSION}.pkg')
 EXAMPLE_SHEET_PATH = os.path.join(RES, 'base', '250927_오펄스_작성예제.xlsx')
@@ -544,7 +544,30 @@ def generate(req):
             'pending': 0 if ONLINE else len(copies) - len(done)}
 
 
+_WIN = {}                     # 앱 창 모드일 때의 창 (네이티브 폴더/파일 선택 창에 사용)
+
+
+def _native_dialog(folder):
+    """앱 창 모드면 창에 붙는 네이티브 선택 창을 쓴다. 창이 없으면 None(→ osascript 폴백)."""
+    w = _WIN.get('w')
+    if not w:
+        return None
+    try:
+        import webview
+        if folder:
+            r = w.create_file_dialog(webview.FOLDER_DIALOG)
+        else:
+            r = w.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False,
+                                     file_types=('채널시트 (*.numbers;*.xlsx)',))
+        return (r[0].rstrip('/') if r else '') or ''
+    except Exception:
+        return None
+
+
 def choose_folder(prompt):
+    p = _native_dialog(True)
+    if p is not None:
+        return p or None
     try:
         r = subprocess.run(['osascript', '-e',
                             f'POSIX path of (choose folder with prompt "{prompt}")'],
@@ -556,6 +579,9 @@ def choose_folder(prompt):
 
 
 def choose_file():
+    p = _native_dialog(False)
+    if p is not None:
+        return p or None
     try:
         r = subprocess.run(['osascript', '-e',
                             'POSIX path of (choose file with prompt "채널시트 파일을 선택하세요")'],
@@ -1372,19 +1398,7 @@ def _free_port(start):
     return p
 
 
-def main():
-    global PORT
-    if _port_busy(PORT):
-        if _showfile_on(PORT):
-            if FROZEN:
-                _open_browser()
-            return  # 이미 실행 중
-        new = _free_port(PORT)
-        print(f'포트 {PORT}는 다른 앱이 사용 중 → {new}로 실행', file=sys.stderr)
-        PORT = new
-    print(f'쇼파일 생성기 http://127.0.0.1:{PORT}', file=sys.stderr)
-    if FROZEN:
-        threading.Timer(0.7, _open_browser).start()
+def _serve():
     while True:
         env_host = os.environ.get('SHOWFILE_HOST')
         host = env_host or ('0.0.0.0' if config().get('lan_mode') else '127.0.0.1')
@@ -1392,6 +1406,63 @@ def main():
         _SRV['srv'] = srv
         srv.serve_forever()   # set_lan이 shutdown()하면 새 호스트로 재바인드
         srv.server_close()
+
+
+def _window_mode():
+    """맥 앱(동결 빌드)은 브라우저 대신 자체 창으로 연다. SHOWFILE_WINDOW=1/0 으로 강제 가능."""
+    v = os.environ.get('SHOWFILE_WINDOW')
+    if v is not None:
+        return v.lower() in ('1', 'true', 'yes')
+    return FROZEN and not ONLINE and not os.environ.get('SHOWFILE_HOST')
+
+
+def _run_window():
+    """내장 서버를 백그라운드로 띄우고 앱 창에서 연다. 창을 닫으면 앱이 종료된다."""
+    import time
+    import webview
+    webview.settings['ALLOW_DOWNLOADS'] = True
+    threading.Thread(target=_serve, daemon=True).start()
+    for _ in range(50):
+        if _port_busy(PORT):
+            break
+        time.sleep(0.1)
+    store = os.path.join(os.path.dirname(CFG) if FROZEN else tempfile.gettempdir(), 'showfile_webview')
+    _WIN['w'] = webview.create_window('쇼파일 생성기', f'http://127.0.0.1:{PORT}',
+                                      width=1320, height=900, min_size=(960, 640))
+    webview.start(private_mode=False, storage_path=store)
+
+
+def main():
+    global PORT
+    if os.environ.get('SHOWFILE_SELFTEST'):   # 빌드 스크립트용: 번들에 필요한 모듈·리소스가 다 들었는지
+        import webview, webview.platforms.cocoa  # noqa: F401
+        for fw in ('1', '2'):
+            ok, msg, _ = dm7_gen.validate_base(dm7_gen.default_base(fw))
+            assert ok, msg
+        assert os.path.isfile(VOCAB_PATH) and os.path.isfile(SPRK_BASE)
+        print(f'SELFTEST OK v{APP_VERSION}')
+        return
+    window = _window_mode()
+    if window:
+        try:
+            import webview  # noqa: F401
+        except ImportError:
+            window = False
+    if _port_busy(PORT):
+        if not window and _showfile_on(PORT):
+            if FROZEN:
+                _open_browser()
+            return  # 이미 실행 중
+        new = _free_port(PORT)   # 앱 창 모드는 항상 자기 서버를 띄운다
+        print(f'포트 {PORT}는 다른 앱이 사용 중 → {new}로 실행', file=sys.stderr)
+        PORT = new
+    print(f'쇼파일 생성기 http://127.0.0.1:{PORT}', file=sys.stderr)
+    if window:
+        _run_window()
+        return
+    if FROZEN:
+        threading.Timer(0.7, _open_browser).start()
+    _serve()
 
 
 if __name__ == '__main__':

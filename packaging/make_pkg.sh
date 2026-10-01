@@ -31,17 +31,27 @@ echo "── PyInstaller 빌드 (v$VERSION)"
     --collect-all numbers_parser --collect-all openpyxl \
     --hidden-import sheet2spec --hidden-import dm7_gen --hidden-import klang_gen \
     --hidden-import sprk_gen --hidden-import x32_gen --hidden-import run_pipeline \
+    --collect-submodules webview --hidden-import webview.platforms.cocoa \
+    --collect-submodules pkg_resources \
     app_server.py > "$B/pyinstaller.log" 2>&1 ) || { tail -30 "$B/pyinstaller.log"; exit 1; }
 
 APP="$B/root/$APPNAME.app"
 ditto "$B/dist/$EXE.app" "$APP"
+
+# 공증 전에 실제로 뜨는지 확인 (모듈 누락은 서명·공증을 통과해도 실행 즉시 죽는다)
+echo "── 기동 자체 테스트"
+SHOWFILE_SELFTEST=1 "$APP/Contents/MacOS/$EXE" > "$B/selftest.log" 2>&1 || true
+grep -q "SELFTEST OK" "$B/selftest.log" || { echo "자체 테스트 실패:"; tail -15 "$B/selftest.log"; exit 1; }
+echo "  $(grep "SELFTEST OK" "$B/selftest.log")"
 PL="$APP/Contents/Info.plist"
 pb() { /usr/libexec/PlistBuddy -c "$1" "$PL" 2>/dev/null || true; }
 pb "Delete :CFBundleDisplayName";         pb "Add :CFBundleDisplayName string 쇼파일 생성기"
 pb "Delete :CFBundleShortVersionString";  pb "Add :CFBundleShortVersionString string $VERSION"
 pb "Delete :CFBundleVersion";             pb "Add :CFBundleVersion string $VERSION"
 pb "Delete :LSMinimumSystemVersion";      pb "Add :LSMinimumSystemVersion string 11.0"
-pb "Delete :LSUIElement";                 pb "Add :LSUIElement bool true"   # 창 없는 서버 앱 — 독 아이콘 무한 바운스 방지
+pb "Delete :LSUIElement"                                              # v0.8.0부터 자체 창을 띄우는 일반 앱 (독 아이콘 있음)
+pb "Delete :CFBundleName";                pb "Add :CFBundleName string Showfile Generator"
+pb "Delete :NSAppTransportSecurity";      pb "Add :NSAppTransportSecurity dict"; pb "Add :NSAppTransportSecurity:NSAllowsLocalNetworking bool true"
 cp LICENSE.txt TERMS.md "$APP/Contents/Resources/" 2>/dev/null || true
 
 xattr -cr "$APP"

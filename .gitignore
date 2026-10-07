@@ -7,3 +7,5 @@ app/config.json
 .netlify
 app/custom_dm7_base.dm7f
 dist/
+*.sprk-wal
+*.sprk-shm

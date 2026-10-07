@@ -52,7 +52,7 @@ SPRK_BASE = os.path.join(RES, 'base', 'sprk_base.sprk')
 TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트 템플릿.numbers')
 ONLINE_TEMPLATE_PATH = os.path.join(RES, 'base', '00_채널시트_템플릿.xlsx')
 # 맥 앱 배포본은 Developer ID 서명·공증된 .pkg만 (GitHub Releases, 홈페이지 다운로드 페이지와 동일 링크)
-OFFLINE_PKG_VERSION = '0.9.0'
+OFFLINE_PKG_VERSION = '0.9.1'
 OFFLINE_PKG_URL = ('https://github.com/AudioAZ-KR/audioazpro-site/releases/download/'
                    f'showfile-v{OFFLINE_PKG_VERSION}/ShowfileGenerator-v{OFFLINE_PKG_VERSION}.pkg')
 EXAMPLE_SHEET_PATH = os.path.join(RES, 'base', '250927_오펄스_작성예제.xlsx')

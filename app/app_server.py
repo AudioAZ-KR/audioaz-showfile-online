@@ -368,14 +368,14 @@ def build_review(sheet_path, edits=None):
             'n_suggest': sum(1 for r in rows if r['status'] == 'suggest')}
 
 
-def build_sprk_spec(spec, chain_overrides):
+def build_sprk_spec(spec, chain_overrides, max_ch=None):
     pairmap = dict(tuple(p) for p in spec.get('pairs', []))
     second = {b for a, b in spec.get('pairs', [])}
     racks = []
     rack = 1
     for c in sorted(spec['channels'], key=lambda x: x['ch']):
         ch = c['ch']
-        if ch in second:
+        if ch in second or (max_ch and ch > max_ch):
             continue
         chs = [ch] + ([pairmap[ch]] if ch in pairmap else [])
         name = c['name']
@@ -432,6 +432,8 @@ def generate(req):
     groups_used = [g for g in ['Drums', 'Key', 'GTR', 'AG', 'Sings', 'Piano', 'Bass', 'AMBI']
                    if any(c.get('group') == g for c in channels)]
     spec['groups'] = groups_used
+    paired = {x for p in pairs for x in p}
+    spec['reset_names'] = [ch for ch, nm, io in chans if io and not nm and ch not in paired]
     if any('AMBI' in c.get('dca', []) for c in channels):
         spec['dca_names'] = {'12': 'AMBI'}
     else:
@@ -494,7 +496,7 @@ def generate(req):
         overrides = p.get('chains') or {}
         if not p.get('auto_chain', True):
             overrides = {str(ch['ch']): 'none' for ch in spec['channels']}
-        ss = build_sprk_spec(spec, overrides)
+        ss = build_sprk_spec(spec, overrides, 64 if p.get('max64', True) else None)
         sp = '/tmp/showfile_spec_sprk.json'
         json.dump(ss, open(sp, 'w'), ensure_ascii=False)
         out = os.path.join(STAGE, spec['name'] + '.sprk')
@@ -1128,7 +1130,7 @@ document.documentElement.dataset.theme=curTheme;
 document.addEventListener('DOMContentLoaded',applyTheme);
 const DM7OPTS=[["links","스테레오 링크","시트 페어 + OH 관례"],["dca","DCA 어사인","OnAir/inst/Sings/Drums/AMBI"],["mix","믹스 버스 네이밍·링크","IEM 페어 + Pan Link"],["iem_send","IEM 센드 -20dB","믹스 이름에 IEM 있을 때만"],["matrix","매트릭스 네이밍","TOP/SUB/Main"]];
 const KLANGOPTS=[["links","스테레오 링크",""],["auto_group","자동 그룹","최대 8개 + 정렬"],["color_match","채널 색상 = 그룹 색",""],["panning","패닝 템플릿","드럼 이미지 + 스테레오 폭"],["i3d","i3D 모드","전 믹스"],["gain_minus15","인풋 페이더 -15dB",""],["hide_unused","미사용 채널 숨김",""],["presets_copy","KLANG 앱에 자동 등록","프리셋 폴더 복사"]];
-const SPRKOPTS=[["auto_chain","플러그인 체인 자동 배치","보컬/악기별 · 표에서 개별 수정"]];
+const SPRKOPTS=[["auto_chain","플러그인 체인 자동 배치","보컬/악기별 · 표에서 개별 수정"],["max64","1~64채널만","랙 64 · 레이어 4페이지 한도"]];
 const CHAIN_LABELS={auto:"자동",vocal:"보컬 체인",inst:"악기 체인",none:"빈 랙"};
 let sheets=[],sel=null,busy=false,review=null,edits={},chains={},confirmed={},isOnline=false;
 const st={dm7:{enabled:false},klang:{enabled:false},sprk:{enabled:false},x32:{enabled:false}};

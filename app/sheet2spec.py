@@ -90,8 +90,14 @@ def parse(path):
         low = [str(x).strip().lower() for x in r]
         if 'input' in low and 'name' in low:
             hdr = i
-            cols = {name: low.index(name) for name in ('input', 'name') if name in low}
-            cols['io'] = low.index('io input') if 'io input' in low else cols['name'] - 1
+            # 한 행에 input|io input|name 묶음이 여러 번 나오면(1~64 | 65~128 두 블록 시트) 전부 읽는다
+            blocks = []
+            for ci, v in enumerate(low):
+                if v == 'input' and 'name' in low[ci + 1:ci + 4]:
+                    ni = low.index('name', ci + 1)
+                    blocks.append({'input': ci, 'name': ni,
+                                   'io': low.index('io input', ci) if 'io input' in low[ci:ni] else ni - 1})
+            cols = blocks[0]
             out_cols = {}
             if 'output' in low:
                 oi = low.index('output')
@@ -101,13 +107,16 @@ def parse(path):
 
     chans = []          # (ch, name, io)
     for r in rows[hdr + 1:]:
-        try:
-            ch = int(float(r[0]))
-        except (ValueError, IndexError):
-            continue
-        name = str(r[cols['name']]).strip().replace('\n', ' ')
-        io = str(r[cols['io']]).strip()
-        chans.append((ch, name, io))
+        for b in blocks:
+            try:
+                ch = int(float(r[b['input']]))
+                name = str(r[b['name']]).strip().replace('\n', ' ')
+                io = str(r[b['io']]).strip()
+            except (ValueError, IndexError):
+                continue
+            if b is blocks[0] or name or io:   # 오른쪽 블록은 내용 있는 행만
+                chans.append((ch, name, io))
+    chans.sort(key=lambda x: x[0])
 
     outputs = []        # (device, output, name)
     if out_cols:
@@ -131,7 +140,7 @@ def classify(chans):
     used = set()
     seq = sorted(named)
     # 페어: 이름 있는 행 + 다음 행이 IO는 있는데 이름이 빈 경우 (스테레오 후보 악기만)
-    STEREO_OK = re.compile(r'piano|key|synth|pad|mtr|eg|gtr|guitar|ag|oh|spd|ppr|프리젠터|drum(?!\s*click)|bgm|fx|sov|mac|music|스테레오|st', re.I)
+    STEREO_OK = re.compile(r'piano|key|synth|pad|mtr|eg|gtr|guitar|ag|oh|spd|ppr|프리젠터|drum(?!\s*click)|bgm|fx|sov|mac|music|2\s*tr|playback|스테레오|st', re.I)
     all_ch = {ch for ch, nm, io in chans}
     for ch in seq:
         nxt = ch + 1
@@ -179,7 +188,7 @@ def classify(chans):
         def st(width):
             return {'width_deg': width}
 
-        if re.search(r'kick|snare', low):
+        if re.search(r'kick|snare|\bsn\b|\bsnr?\s|^sn\s|hat|ride|crash|cymbal|china|splash|심벌|스네어|킥', low):
             c.update(group='Drums', dca=['OnAir', 'inst', 'Drums'], pan='mono')
         elif re.fullmatch(r'hh|hi-?hat', low):
             c.update(group='Drums', dca=['OnAir', 'inst', 'Drums'], pan={'pos_deg': 79.5})
@@ -201,7 +210,9 @@ def classify(chans):
             c.update(group=None, dca=[], pan='mono')
         elif 'tb' in low.split() or low.startswith('tb') or low.endswith('tb'):
             c.update(group=None, dca=[], pan='mono')
-        elif 'ambi' in low:
+        elif re.search(r'\bcho\b|chorus|코러스', low):   # 코러스(연주자 보컬) — 'CHO 1(SYNTH)'가 Key로 빠지지 않게 먼저
+            c.update(group='Sings', dca=['OnAir', 'Sings'], pan='mono')
+        elif re.search(r'ambi|이머시브|immersive|ambisonic|앰비|센터 모노', low):   # 앰비언스·이머시브 수음
             c.update(group='AMBI', dca=['AMBI'], pan='mono')
         elif 'piano' in low:
             c.update(group='Piano', dca=['OnAir', 'inst'],
@@ -218,7 +229,7 @@ def classify(chans):
             c.update(group='AG', dca=['OnAir', 'inst'], pan=st(w) if is_pair else 'mono')
         elif re.search(r'ppr|프리젠터|playback|재생', low):
             c.update(group=None, dca=[], pan='mono')
-        elif re.search(r'mc|pastor|설교|사회|speech|스피치|예비', low):
+        elif re.search(r'mc|pastor|설교|사회|speech|스피치|예비|통역|interp', low):
             c.update(group='Sings', dca=[], pan='mono')
         elif (re.search(r'wl|무선|sing|vox|chorus|합창|코러스|소프라노|leader|인도|guest|게스트|핀|\bpin\b', low)
               or not is_ascii(base)):

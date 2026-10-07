@@ -161,6 +161,16 @@ def patch_blob(raw, spec, is_current):
     # + 링크 페어에서 이름이 스펙에 없는 쪽(시트 빈 행)은 상대 채널 이름을 미러링
     have = {c['ch'] for c in spec['channels']}
     name_by = {c['ch']: c['name'] for c in spec['channels']}
+    # 시트에 이름 없이 IO만 있는 행(모노, 미사용 입력)은 베이스의 잔재 이름을 지우고 기본 이름으로
+    for ch in spec.get('reset_names', []):
+        wname(raw, ms[ch - 1] + 8, f'ch{ch:>2}')
+    have |= set(spec.get('reset_names', []))
+    # 베이스(리셋 쇼파일)에 이미 링크된 페어가 시트 채널과 겹치는데 스펙 페어가 아니면 링크 해제
+    want = {tuple(p) for p in spec.get('pairs', [])}
+    for i in range(119):
+        if raw[ms[i] - 2:ms[i]] == b'\x03\x80' and raw[ms[i + 1] - 2:ms[i + 1]] == b'\x03\x01' \
+           and (i + 1, i + 2) not in want and ({i + 1, i + 2} & have):
+            raw[ms[i] - 2:ms[i]] = raw[ms[i + 1] - 2:ms[i + 1]] = b'\x00\x00'
     for a, b in spec.get('pairs', []):
         raw[ms[a - 1] - 2:ms[a - 1]] = b'\x03\x80'
         raw[ms[b - 1] - 2:ms[b - 1]] = b'\x03\x01'

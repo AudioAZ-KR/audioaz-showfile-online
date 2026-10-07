@@ -134,5 +134,6 @@ spctl -a -vvv -t install "$OUT" 2>&1 | head -3
 for f in "$REPO"/dist/ShowfileGenerator-v*.pkg; do
   [ -e "$f" ] || continue; [ "$f" = "$OUT" ] && continue; rm -f "$f" && echo "  옛 버전 삭제: $f"
 done
+rm -rf "$B/dist" "$B/root" "$B/work"   # 빌드 .app을 남기면 런치패드(Spotlight)에 중복으로 뜬다
 echo "완료: $OUT ($(du -h "$OUT" | cut -f1))"
 echo "배포: ~/Projects/AudioAZ/publish-installer.sh showfile-v$VERSION \"$OUT\" → app_server.py OFFLINE_PKG_VERSION 갱신"

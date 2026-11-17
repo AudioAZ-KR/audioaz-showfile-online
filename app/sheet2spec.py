@@ -210,7 +210,7 @@ def classify(chans):
             c.update(group=None, dca=[], pan='mono')
         elif 'tb' in low.split() or low.startswith('tb') or low.endswith('tb'):
             c.update(group=None, dca=[], pan='mono')
-        elif re.search(r'\bcho\b|chorus|코러스', low):   # 코러스(연주자 보컬) — 'CHO 1(SYNTH)'가 Key로 빠지지 않게 먼저
+        elif re.search(r'\bcho\b|cho?rus|코러스', low):   # 코러스(연주자 보컬) — 'CHO 1(SYNTH)'가 Key로 빠지지 않게 먼저
             c.update(group='Sings', dca=['OnAir', 'Sings'], pan='mono')
         elif re.search(r'ambi|이머시브|immersive|ambisonic|앰비|센터 모노', low):   # 앰비언스·이머시브 수음
             c.update(group='AMBI', dca=['AMBI'], pan='mono')
@@ -232,7 +232,7 @@ def classify(chans):
         elif re.search(r'mc|pastor|설교|사회|speech|스피치|예비|통역|interp', low):
             c.update(group='Sings', dca=[], pan='mono')
         elif (re.search(r'wl|무선|sing|vox|chorus|합창|코러스|소프라노|leader|인도|guest|게스트|핀|\bpin\b', low)
-              or not is_ascii(base)):
+              or not is_ascii(base) or re.fullmatch(r'\d+ [a-z]{2,}', low)):   # '1 RAM' = 무선 번호 + 이름
             c.update(group='Sings', dca=['OnAir', 'Sings'], pan='mono')
         else:
             c.update(group=None, dca=[], pan='mono')

@@ -197,6 +197,58 @@ def generate(spec_path, out_path, base_path=None, src_grp='LCL', romanize=None):
     return {'strips': len(strips), 'stereo': n_st, 'buses': len(buses), 'matrix': len(mtxs), 'warnings': warn}
 
 
+def generate_hub(spec, out_path, base_path=None, src='CRD', outs=('B', 'C'), romanize=None):
+    """허브(패스스루) 모드 — 시트 입력 n번 = 소스 n번에 이름만 넣고, 출력 그룹으로 1:1 직결.
+    WING을 믹서가 아니라 단테 → AES50(DP48 등) 분배기로 쓸 때. 채널 스트립은 건드리지 않는다.
+    스테레오: 페어의 뒷줄 이름이 비어 있고 홀수에서 시작하면 소스 모드 ST(이름 공유), 아니면 모노 그대로."""
+    snap = json.load(open(base_path or default_base(), encoding='utf-8'))
+    ae = snap['ae_data']
+    srcs = ae['io']['in'][src]
+    warn, named = [], {}
+    chans = {c['ch']: c for c in spec['channels'] if c['name'].strip(' -')}
+    listed = {c['ch'] for c in spec['channels']}
+    st_first = set()
+    for a, b in spec.get('pairs', []):
+        own = b in chans and chans[b]['name'] != chans.get(a, {}).get('name')
+        if a in chans and not own:
+            if a % 2 == 1:
+                st_first.add(a)
+            else:
+                warn.append(f"{a}/{b} {chans[a]['name']}: 짝수에서 시작해 스테레오 소스로 묶지 못하고 모노 L/R로 둡니다")
+    for n in sorted(chans):
+        if n > len(srcs) or n in named:
+            continue
+        c = chans[n]
+        name, col = _ascii_name(c['name'], romanize), GROUP_COL.get(c.get('group'), 1)
+        if n in st_first:
+            for k in (n, n + 1):
+                srcs[str(k)].update(mode='ST', name=name, col=col)
+                named[k] = name + ' (ST)'
+        elif (n - 1) in dict(spec.get('pairs', [])) and n not in listed - set(chans) and (n - 1) % 2 == 0 and chans.get(n - 1, {}).get('name') == c['name']:
+            for k, sfx in ((n - 1, ' L'), (n, ' R')):      # 짝수 시작 페어: 이름에 L/R
+                srcs[str(k)].update(mode='M', name=name[:NAME_MAX - 2] + sfx, col=col)
+                named[k] = srcs[str(k)]['name']
+        else:
+            srcs[str(n)].update(mode='M', name=name, col=col)
+            named[n] = name
+    for g in outs:
+        og = ae['io']['out'][g]
+        for k in og:
+            if int(k) <= len(srcs):
+                og[k]['grp'], og[k]['in'] = src, int(k)
+    if 'created' in snap:
+        snap['created'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with open(out_path, 'w', encoding='utf-8') as f:
+        json.dump(snap, f, ensure_ascii=True, separators=(',', ':'))
+    chk = json.load(open(out_path, encoding='utf-8'))['ae_data']
+    for g in outs:
+        assert all(o['grp'] == src and o['in'] == int(k) for k, o in chk['io']['out'][g].items())
+    print(f"OK: {os.path.basename(out_path)} — {src} 소스 {len(named)}개 네이밍, 출력 {' · '.join(outs)} ← {src} 1:1")
+    for w in warn:
+        print('  주의:', w)
+    return {'named': named, 'warnings': warn}
+
+
 BUS_COL = {'IEM': 10, 'MON': 6, 'FX': 12, 'GRP': 4}
 
 
@@ -319,6 +371,12 @@ def generate_from_sheet(model, out_path, base_path=None, romanize=None, classify
 
 if __name__ == '__main__':
     import sheet2spec
+    if sys.argv[1] == '--hub':                            # --hub 시트 out.snap [출력그룹 B,C] [소스 CRD] [베이스]
+        spec = sheet2spec.build_spec(sys.argv[2])
+        generate_hub(spec, sys.argv[3], sys.argv[6] if len(sys.argv) > 6 else None,
+                     sys.argv[5] if len(sys.argv) > 5 else 'CRD',
+                     tuple((sys.argv[4] if len(sys.argv) > 4 else 'B,C').split(',')), sheet2spec.romanize)
+        sys.exit(0)
     if sys.argv[1].lower().endswith('.numbers'):          # 스트립 채널시트 작성본 → .snap
         import stripsheet
         m = stripsheet.parse(sys.argv[1])

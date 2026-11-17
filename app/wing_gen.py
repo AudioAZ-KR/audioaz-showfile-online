@@ -210,6 +210,10 @@ def generate_hub(spec, out_path, base_path=None, src='CRD', outs=('B', 'C'), rom
     st_first = set()
     for a, b in spec.get('pairs', []):
         own = b in chans and chans[b]['name'] != chans.get(a, {}).get('name')
+        if own and a in chans and all(chans[k]['name'].lower().startswith('oh') for k in (a, b)):
+            chans[a] = dict(chans[a], name='OH')         # OH Ride / OH HH → 스테레오 'OH' (사용자 관례)
+            del chans[b]
+            own = False
         if a in chans and not own:
             if a % 2 == 1:
                 st_first.add(a)

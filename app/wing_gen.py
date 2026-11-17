@@ -197,7 +197,19 @@ def generate(spec_path, out_path, base_path=None, src_grp='LCL', romanize=None):
     return {'strips': len(strips), 'stereo': n_st, 'buses': len(buses), 'matrix': len(mtxs), 'warnings': warn}
 
 
-def generate_hub(spec, out_path, base_path=None, src='CRD', outs=('B', 'C'), romanize=None):
+def dp48_returns(groups=('B', 'C'), per_port=4):
+    """DP48 믹스 리턴 표준(사용자 WING 라우팅 화면 실측 261117): AES50 포트마다 DP48 4대,
+    각 DP48의 스테레오 믹스가 그 포트의 1/2, 9/10, 17/18, 25/26(8채널 간격)으로 돌아온다.
+    → 카드(단테) 출력 1~8 ← B, 9~16 ← C.  반환: {카드 출력 번호: (그룹, 입력 번호)}"""
+    m = {}
+    for gi, g in enumerate(groups):
+        for k in range(per_port):
+            for lr in (0, 1):
+                m[gi * per_port * 2 + k * 2 + lr + 1] = (g, k * 8 + lr + 1)
+    return m
+
+
+def generate_hub(spec, out_path, base_path=None, src='CRD', outs=('B', 'C'), romanize=None, returns=True):
     """허브(패스스루) 모드 — 시트 입력 n번 = 소스 n번에 이름만 넣고, 출력 그룹으로 1:1 직결.
     WING을 믹서가 아니라 단테 → AES50(DP48 등) 분배기로 쓸 때. 채널 스트립은 건드리지 않는다.
     스테레오: 페어의 뒷줄 이름이 비어 있고 홀수에서 시작하면 소스 모드 ST(이름 공유), 아니면 모노 그대로."""
@@ -240,6 +252,9 @@ def generate_hub(spec, out_path, base_path=None, src='CRD', outs=('B', 'C'), rom
         for k in og:
             if int(k) <= len(srcs):
                 og[k]['grp'], og[k]['in'] = src, int(k)
+    ret = dp48_returns(outs) if returns else {}
+    for n, (g, i) in ret.items():                      # DP48 믹스 리턴 → 카드(단테) 출력
+        ae['io']['out'][src][str(n)].update(grp=g, **{'in': i})
     if 'created' in snap:
         snap['created'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     with open(out_path, 'w', encoding='utf-8') as f:
@@ -247,7 +262,8 @@ def generate_hub(spec, out_path, base_path=None, src='CRD', outs=('B', 'C'), rom
     chk = json.load(open(out_path, encoding='utf-8'))['ae_data']
     for g in outs:
         assert all(o['grp'] == src and o['in'] == int(k) for k, o in chk['io']['out'][g].items())
-    print(f"OK: {os.path.basename(out_path)} — {src} 소스 {len(named)}개 네이밍, 출력 {' · '.join(outs)} ← {src} 1:1")
+    print(f"OK: {os.path.basename(out_path)} — {src} 소스 {len(named)}개 네이밍, 출력 {' · '.join(outs)} ← {src} 1:1"
+          + (f", {src} 출력 1~{len(ret)} ← DP48 리턴" if ret else ''))
     for w in warn:
         print('  주의:', w)
     return {'named': named, 'warnings': warn}

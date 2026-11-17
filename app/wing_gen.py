@@ -197,7 +197,135 @@ def generate(spec_path, out_path, base_path=None, src_grp='LCL', romanize=None):
     return {'strips': len(strips), 'stereo': n_st, 'buses': len(buses), 'matrix': len(mtxs), 'warnings': warn}
 
 
+BUS_COL = {'IEM': 10, 'MON': 6, 'FX': 12, 'GRP': 4}
+
+
+def generate_from_sheet(model, out_path, base_path=None, romanize=None, classify=None):
+    """스트립 채널시트(stripsheet.parse 결과) → .snap. 시트의 번호 = WING 채널 번호(41~48은 AUX 1~8)."""
+    snap = json.load(open(base_path or default_base(), encoding='utf-8'))
+    ae = snap['ae_data']
+    ins, outs = ae['io']['in'], ae['io']['out']
+    warn = list(model.get('warnings', []))
+
+    auto = {}
+    if classify:                                     # 이름으로 악기 그룹·DCA 추정 (색·자동 DCA용)
+        chans, _ = classify([(s['n'], s['name'], 'x') for s in model['strips']])
+        auto = {c['ch']: c for c in chans}
+    dca_no = {k.lower(): v for k, v in DCA_SLOTS.items()}
+    dca_no.update({str(v).lower(): int(k) for k, v in model.get('dca_names', {}).items()})
+
+    iem_buses = [b['n'] for b in model['buses'] if b['kind'] == 'IEM' and b['n'] <= N_BUS]
+    lvl = model.get('iem_send_db')
+    n_ok = n_st = 0
+    for s in model['strips']:
+        n = s['n']
+        if n > N_CH + N_AUX:
+            warn.append(f"{n}번 {s['name']}: WING은 48스트립(채널 40 + AUX 8)까지라 넣지 못했습니다")
+            continue
+        strip = ae['ch'][str(n)] if n <= N_CH else ae['aux'][str(n - N_CH)]
+        name = _ascii_name(s['name'], romanize)
+        a = auto.get(n, {})
+        col = s.get('color') or GROUP_COL.get(a.get('group'), 1)
+        dev, port, st = s['device'], s['port'], s['stereo']
+        grp = ins.get(dev)
+        if grp is None:
+            warn.append(f"{n}번 {s['name']}: 입력 장비 '{dev}'는 WING에 없습니다 (LCL/AUX/A/B/C/CRD/USB 등) — 소스 미연결")
+        elif port + (1 if st else 0) > len(grp):
+            warn.append(f"{n}번 {s['name']}: {dev} {port}번은 범위를 넘습니다({len(grp)}개) — 소스 미연결")
+            grp = None
+        elif st and port % 2 == 0:
+            warn.append(f"{n}번 {s['name']}: WING 스테레오는 홀수 포트에서 시작해야 합니다({dev} {port}) — 모노로 연결")
+            st = False
+        if grp is not None:
+            for k in ([port, port + 1] if st else [port]):
+                grp[str(k)]['mode'] = 'ST' if st else 'M'
+                grp[str(k)]['name'], grp[str(k)]['col'] = name, col
+            strip['in']['conn']['grp'], strip['in']['conn']['in'] = dev, port
+        else:
+            strip['in']['conn']['grp'], strip['in']['conn']['in'] = 'OFF', 1
+        strip['name'], strip['col'] = name, col
+        if s.get('dca') is None:
+            dcas = [dca_no[d.lower()] for d in a.get('dca', []) if d.lower() in dca_no] if model.get('dca_auto', True) else []
+        else:
+            dcas = [d for d in s['dca'] if 1 <= d <= N_DCA]
+        keep = [t for t in str(strip.get('tags') or '').split(',') if t and not re.fullmatch(r'#[DM]\d+', t)]
+        strip['tags'] = ','.join(keep + [f'#D{d}' for d in sorted(set(dcas))]
+                                 + [f'#M{m}' for m in sorted(set(s.get('mute') or [])) if 1 <= m <= 8])
+        if lvl is not None:
+            for b in iem_buses:
+                strip['send'][str(b)]['lvl'], strip['send'][str(b)]['on'] = lvl, True
+        n_ok += 1
+        n_st += st
+
+    def route(item, kind, what):
+        o = item.get('out')
+        if not o:
+            return
+        grp = outs.get(o['device'])
+        if grp is None:
+            warn.append(f"{what} {item['name']}: 출력 장비 '{o['device']}'는 WING에 없습니다")
+            return
+        base = 2 * (item['n'] - 1) + 1                 # 버스·메인·매트릭스의 L = 2n-1, R = 2n
+        if item['stereo'] and len(o['ports']) == 1:
+            warn.append(f"{what} {item['name']}: 스테레오인데 출력 포트가 1개라 L만 보냅니다")
+        for i, p in enumerate(o['ports'][:2 if item['stereo'] else 1]):
+            if str(p) not in grp:
+                warn.append(f"{what} {item['name']}: {o['device']} {p}번 출력은 없습니다")
+                continue
+            grp[str(p)]['grp'], grp[str(p)]['in'] = kind, base + i
+
+    for b in model['buses']:
+        if b['n'] > N_BUS:
+            warn.append(f"버스 {b['n']} {b['name']}: WING 버스는 16개까지입니다")
+            continue
+        bus = ae['bus'][str(b['n'])]
+        bus['name'], bus['busmono'] = _ascii_name(b['name'], romanize), not b['stereo']
+        bus['col'] = BUS_COL.get(b['kind'], MON_COL)
+        route(b, 'BUS', '버스')
+    for key, kind, limit, what in (('mains', 'MAIN', 4, '메인'), ('mtx', 'MTX', N_MTX, '매트릭스')):
+        for m in model[key]:
+            if m['n'] > limit:
+                warn.append(f"{what} {m['n']}: WING은 {limit}개까지입니다")
+                continue
+            tgt = ae['main' if kind == 'MAIN' else 'mtx'][str(m['n'])]
+            tgt['name'], tgt['busmono'] = _ascii_name(m['name'], romanize), not m['stereo']
+            route(m, kind, what)
+    for k, v in model.get('dca_names', {}).items():
+        if 1 <= int(k) <= N_DCA:
+            ae['dca'][str(int(k))]['name'] = _ascii_name(v, romanize)
+    for k, v in model.get('mute_names', {}).items():
+        if 1 <= int(k) <= 8:
+            ae['mgrp'][str(int(k))]['name'] = _ascii_name(v, romanize)
+    for d in model.get('direct', []):
+        og, sg = outs.get(d['out_device']), ins.get(d['src_device'])
+        if og is None or sg is None:
+            warn.append(f"직결 라우팅 {d['out_device']} ← {d['src_device']}: WING에 없는 장비 이름입니다")
+            continue
+        for op, sp_ in zip(d['out_ports'], d['src_ports']):
+            if str(op) in og and str(sp_) in sg:
+                og[str(op)]['grp'], og[str(op)]['in'] = d['src_device'], sp_
+
+    if 'created' in snap:
+        snap['created'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    with open(out_path, 'w', encoding='utf-8') as f:
+        json.dump(snap, f, ensure_ascii=True, separators=(',', ':'))
+    json.load(open(out_path, encoding='utf-8'))
+    print(f"OK: {os.path.basename(out_path)} — 스트립 {n_ok}개(스테레오 {n_st}), 버스 {len(model['buses'])}, "
+          f"메인 {len(model['mains'])}, 매트릭스 {len(model['mtx'])}, 직결 {len(model.get('direct', []))}건")
+    for w in warn:
+        print('  주의:', w)
+    return {'strips': n_ok, 'stereo': n_st, 'warnings': warn}
+
+
 if __name__ == '__main__':
+    import sheet2spec
+    if sys.argv[1].lower().endswith('.numbers'):          # 스트립 채널시트 작성본 → .snap
+        import stripsheet
+        m = stripsheet.parse(sys.argv[1])
+        out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(
+            os.path.dirname(sys.argv[1]), (m['name'] or os.path.splitext(os.path.basename(sys.argv[1]))[0]) + '.snap')
+        generate_from_sheet(m, out, sys.argv[3] if len(sys.argv) > 3 else None, sheet2spec.romanize, sheet2spec.classify)
+        sys.exit(0)
     import sheet2spec
     generate(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None,
              sys.argv[4] if len(sys.argv) > 4 else 'LCL', sheet2spec.romanize)

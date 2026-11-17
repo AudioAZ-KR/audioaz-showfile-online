@@ -23,7 +23,7 @@ from urllib.parse import quote, unquote
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import sheet2spec, dm7_gen, klang_gen, sprk_gen, x32_gen
+import sheet2spec, dm7_gen, klang_gen, sprk_gen, x32_gen, wing_gen
 from run_pipeline import next_version
 
 FROZEN = getattr(sys, 'frozen', False)
@@ -242,6 +242,7 @@ DEFAULT_CFG = {
     'klang_out_dir': os.path.expanduser('~/Desktop/쇼파일/KLANG'),
     'sprk_out_dir': os.path.expanduser('~/Desktop/쇼파일/SuperRack'),
     'x32_out_dir': os.path.expanduser('~/Desktop/쇼파일/X32'),
+    'wing_out_dir': os.path.expanduser('~/Desktop/쇼파일/WING'),
     'klang_presets_copy': True,
     'lan_mode': False,
 }
@@ -253,6 +254,8 @@ def config():
     except (OSError, ValueError):
         c = dict(DEFAULT_CFG)
         save_config(c)
+    if 'wing_out_dir' not in c and c.get('dm7_out_dir'):      # 기존 사용자는 DM7 폴더 옆에
+        c['wing_out_dir'] = os.path.join(os.path.dirname(c['dm7_out_dir']), 'WING')
     for k, v in DEFAULT_CFG.items():
         c.setdefault(k, v)
     return c
@@ -443,7 +446,7 @@ def generate(req):
     dm7_dir, klang_dir, sprk_dir, x32_dir = c['dm7_out_dir'], c['klang_out_dir'], c['sprk_out_dir'], c.get('x32_out_dir', os.path.expanduser('~/Desktop/쇼파일/X32'))
     os.makedirs(STAGE, exist_ok=True)
     spec['name'] = pick_version(spec['name'], [dm7_dir, klang_dir, sprk_dir, x32_dir, STAGE],
-                                ['.dmxf', '.dm7f', '.KLANGshow', '.sprk', '.x32'])
+                                ['.dmxf', '.dm7f', '.KLANGshow', '.sprk', '.x32', '.snap'])
     spec['snapshot'] = (spec.get('ascii_name') or spec['name']).replace('_', '')[:10]
     copies = []   # (staged_path, dst_dir)
 
@@ -506,6 +509,30 @@ def generate(req):
             raise RuntimeError(f'SuperRack 생성 실패: {e}')
         copies.append((out, sprk_dir))
 
+    notes = []
+    w = req.get('wing') or {}
+    if w.get('enabled'):
+        s = copy.deepcopy(spec)
+        if not w.get('dca', True):
+            for ch in s['channels']:
+                ch['dca'] = []
+        if not w.get('mix', True):
+            s['mixes'], s['mix_pairs'], s['matrix'] = {}, [], {}
+        if w.get('iem_send', True):
+            s['iem_send_db'] = -20
+        src = w.get('src', 'LCL')
+        if src not in wing_gen.SRC_GROUPS:
+            src = 'LCL'
+        sp = '/tmp/showfile_spec_wing.json'
+        json.dump(s, open(sp, 'w'), ensure_ascii=False)
+        out = os.path.join(STAGE, spec['name'] + '.snap')
+        try:
+            info = wing_gen.generate(sp, out, None, src, sheet2spec.romanize)
+        except (RuntimeError, AssertionError, KeyError) as e:
+            raise RuntimeError(f'WING 생성 실패: {e}')
+        notes += [f'WING: {x}' for x in info['warnings']]
+        copies.append((out, c.get('wing_out_dir', DEFAULT_CFG['wing_out_dir'])))
+
     x = req.get('x32') or {}
     if x.get('enabled'):
         s = copy.deepcopy(spec)
@@ -543,7 +570,7 @@ def generate(req):
         else:
             files.append({'path': os.path.join(dstdir, os.path.basename(src)),
                           'staged': src, 'synced': (src, dstdir) in done})
-    return {'name': spec['name'], 'files': files,
+    return {'name': spec['name'], 'files': files, 'notes': notes,
             'channels': len(spec['channels']), 'pairs': len(spec['pairs']),
             'pending': 0 if ONLINE else len(copies) - len(done)}
 
@@ -821,6 +848,7 @@ class H(BaseHTTPRequestHandler):
                            'dm7_out_dir': 'DM7 쇼파일 저장 폴더를 선택하세요',
                            'klang_out_dir': '클랑 쇼파일 저장 폴더를 선택하세요',
                            'sprk_out_dir': 'SuperRack 쇼파일 저장 폴더를 선택하세요',
+                           'wing_out_dir': 'WING 스냅샷 저장 폴더를 선택하세요',
                            'x32_out_dir': 'X32 쇼파일 저장 폴더를 선택하세요'}
                 p = choose_folder(prompts[key])
                 if p:
@@ -918,7 +946,8 @@ input[type=text]:focus{border-color:var(--tx2)}
 .sheet .d{color:var(--tx2);font-size:11.5px;flex-shrink:0;font-family:ui-monospace,"SF Mono",Menlo,monospace}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
 .out{border-radius:4px;border:1px solid var(--line);background:var(--panel);overflow:hidden;transition:.12s;border-left-width:3px}
-.out.dm7{border-left-color:var(--line2)}.out.klang{border-left-color:var(--line2)}.out.sprk{border-left-color:var(--line2)}
+.out.dm7{border-left-color:var(--line2)}.out.klang{border-left-color:var(--line2)}.out.sprk{border-left-color:var(--line2)}.out.wing{border-left-color:var(--line2)}
+.out.on.wing{border-left-color:var(--acc)}
 .out.on.dm7{border-left-color:var(--dm7)}
 .out.on.klang{border-left-color:var(--klang)}
 .out.on.sprk{border-left-color:var(--sprk)}
@@ -1092,10 +1121,32 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
       <div class="sw"></div>
     </div>
     <div class="obody sprko">
-      <div class="oppt">저장 위치</div>
+      <div class="optt">저장 위치</div>
       <div class="saverow"><span class="p" id="sprkdir"></span><button class="btn" onclick="chooseDir('sprk_out_dir')">변경</button></div>
-      <div class="oppt">세부 옵션</div>
+      <div class="optt">세부 옵션</div>
       <div id="sprkopts"></div>
+    </div>
+  </div>
+  <div class="out wing" id="card_wing">
+    <div class="ohead" onclick="toggleOut('wing')">
+      <div class="oicon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/></svg></div>
+      <div><div class="oname">WING 스냅샷</div><div class="odesc">.snap &middot; Behringer WING &middot; 베타</div></div>
+      <div class="sw"></div>
+    </div>
+    <div class="obody wingo">
+      <div class="optt">저장 위치</div>
+      <div class="saverow"><span class="p" id="wingdir"></span><button class="btn" onclick="chooseDir('wing_out_dir')">변경</button></div>
+      <div class="optt">입력 소스</div>
+      <div class="fwseg" id="wingsrc">
+        <button type="button" data-src="LCL" onclick="setWingSrc('LCL')">Local</button>
+        <button type="button" data-src="A" onclick="setWingSrc('A')">AES50 A</button>
+        <button type="button" data-src="B" onclick="setWingSrc('B')">B</button>
+        <button type="button" data-src="C" onclick="setWingSrc('C')">C</button>
+        <button type="button" data-src="CRD" onclick="setWingSrc('CRD')">Card</button>
+      </div>
+      <div class="fwnote">시트 n번 = 선택한 소스 n번 &middot; 스테레오 페어는 채널 1개(스테레오 소스)로 합쳐집니다 &middot; 채널 40 + AUX 8</div>
+      <div class="optt">세부 옵션</div>
+      <div id="wingopts"></div>
     </div>
   </div>
   <div class="out x32" id="card_x32">
@@ -1105,7 +1156,7 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
       <div class="sw"></div>
     </div>
     <div class="obody x32o">
-      <div class="oppt">저장 위치</div>
+      <div class="optt">저장 위치</div>
       <div class="saverow"><span class="p" id="x32dir"></span><button class="btn" onclick="chooseDir('x32_out_dir')">변경</button></div>
     </div>
   </div>
@@ -1130,15 +1181,20 @@ document.documentElement.dataset.theme=curTheme;
 document.addEventListener('DOMContentLoaded',applyTheme);
 const DM7OPTS=[["links","스테레오 링크","시트 페어 + OH 관례"],["dca","DCA 어사인","OnAir/inst/Sings/Drums/AMBI"],["mix","믹스 버스 네이밍·링크","IEM 페어 + Pan Link"],["iem_send","IEM 센드 -20dB","믹스 이름에 IEM 있을 때만"],["matrix","매트릭스 네이밍","TOP/SUB/Main"]];
 const KLANGOPTS=[["links","스테레오 링크",""],["auto_group","자동 그룹","최대 8개 + 정렬"],["color_match","채널 색상 = 그룹 색",""],["panning","패닝 템플릿","드럼 이미지 + 스테레오 폭"],["i3d","i3D 모드","전 믹스"],["gain_minus15","인풋 페이더 -15dB",""],["hide_unused","미사용 채널 숨김",""],["presets_copy","KLANG 앱에 자동 등록","프리셋 폴더 복사"]];
+const WINGOPTS=[["dca","DCA 어사인","OnAir/inst/Sings/Drums/AMBI"],["mix","버스·매트릭스 네이밍","IEM 페어 = 스테레오 버스"],["iem_send","IEM 센드 -20dB","믹스 이름에 IEM 있을 때만"]];
 const SPRKOPTS=[["auto_chain","플러그인 체인 자동 배치","보컬/악기별 · 표에서 개별 수정"],["max64","1~64채널만","랙 64 · 레이어 4페이지 한도"]];
 const CHAIN_LABELS={auto:"자동",vocal:"보컬 체인",inst:"악기 체인",none:"빈 랙"};
 let sheets=[],sel=null,busy=false,review=null,edits={},chains={},confirmed={},isOnline=false;
-const st={dm7:{enabled:false},klang:{enabled:false},sprk:{enabled:false},x32:{enabled:false}};
+const st={dm7:{enabled:false},klang:{enabled:false},sprk:{enabled:false},x32:{enabled:false},wing:{enabled:false,src:'LCL'}};
+WINGOPTS.forEach(o=>st.wing[o[0]]=true);
+try{const ws=localStorage.getItem('wingsrc');if(ws)st.wing.src=ws;}catch(e){}
+function setWingSrc(v){st.wing.src=v;try{localStorage.setItem('wingsrc',v)}catch(e){}renderWingSrc();}
+function renderWingSrc(){document.querySelectorAll('#wingsrc button').forEach(b=>b.classList.toggle('on',b.dataset.src===st.wing.src));}
 DM7OPTS.forEach(o=>st.dm7[o[0]]=true);KLANGOPTS.forEach(o=>st.klang[o[0]]=true);SPRKOPTS.forEach(o=>st.sprk[o[0]]=true);
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
 function renderOpts(){
-  for(const [id,opts,side] of [["dm7opts",DM7OPTS,"dm7"],["klangopts",KLANGOPTS,"klang"],["sprkopts",SPRKOPTS,"sprk"]]){
+  for(const [id,opts,side] of [["dm7opts",DM7OPTS,"dm7"],["klangopts",KLANGOPTS,"klang"],["sprkopts",SPRKOPTS,"sprk"],["wingopts",WINGOPTS,"wing"]]){
     document.getElementById(id).innerHTML=opts.map(o=>
       `<div class="opt ${st[side][o[0]]?'on':''}" data-key="${o[0]}" onclick="tOpt('${side}','${o[0]}',this)"><div class="chk">&#10003;</div>${o[1]}${o[2]?`<span class="h">${o[2]}</span>`:''}</div>`).join('');
   }
@@ -1157,7 +1213,7 @@ function updateGo(){
     g.innerHTML='실제 쇼파일 생성하기 &mdash; 오프라인 생성기 다운로드 (Mac용)';
     return;
   }
-  const any=st.dm7.enabled||st.klang.enabled||st.sprk.enabled||st.x32.enabled;
+  const any=st.dm7.enabled||st.klang.enabled||st.sprk.enabled||st.x32.enabled||st.wing.enabled;
   const u=unresolved();
   g.disabled=!sel||!any||busy||!review||u>0;
   g.innerHTML=busy?'<span class="spin"></span>생성 중...':
@@ -1240,7 +1296,7 @@ function keepName(ch){confirmed[ch]=true;renderReview();updateGo();}
 async function load(){
   const r=await (await fetch('/api/state')).json();
   isOnline=!!r.online;
-  sheets=r.sheets;setDirs(r.config);renderList();renderOpts();updateGo();
+  sheets=r.sheets;setDirs(r.config);renderList();renderOpts();renderWingSrc();updateGo();
   if(r.online){
     document.querySelector('.searchrow').innerHTML=`<button class="btn" style="width:100%;padding:14px;font-weight:700" onclick="document.getElementById('uploadInput').click()">채널시트 업로드 (.numbers / .xlsx)</button>`;
     document.getElementById('trialbanner').style.display='flex';
@@ -1307,6 +1363,7 @@ function setDirs(c){
   document.getElementById('dm7dir').textContent=shortPath(c.dm7_out_dir);
   document.getElementById('klangdir').textContent=shortPath(c.klang_out_dir);
   document.getElementById('sprkdir').textContent=shortPath(c.sprk_out_dir);
+  document.getElementById('wingdir').textContent=shortPath(c.wing_out_dir||'~/Desktop/쇼파일/WING');
 }
 async function chooseDir(key){
   const r=await (await fetch('/api/choose',{method:'POST',body:JSON.stringify({key})})).json();
@@ -1340,7 +1397,7 @@ async function gen(){
   const editsStr={};for(const k in edits)editsStr[String(k)]=edits[k];
   const chainsStr={};for(const k in chains)if(chains[k]!=='auto')chainsStr[String(k)]=chains[k];
   const body={sheet_path:sel.path,edits:editsStr,dm7:st.dm7,klang:st.klang,
-    sprk:{...st.sprk,chains:chainsStr}};
+    sprk:{...st.sprk,chains:chainsStr},wing:st.wing};
   try{
     const r=await (await fetch('/api/generate',{method:'POST',body:JSON.stringify(body)})).json();
     if(r.error)throw new Error(r.error);
@@ -1348,6 +1405,7 @@ async function gen(){
     res.style.display='block';
     res.innerHTML=`<div style="font-weight:700"><span class="ok">&#10003;</span> ${esc(r.name)} &mdash; 채널 ${r.channels}개, 페어 ${r.pairs}개</div>`+
       (r.pending?`<div style="font-size:12px;color:var(--warn);margin-top:6px">iCloud 동기화 지연 &mdash; 로컬 사본은 완료, 백그라운드에서 계속 저장돼요</div>`:'')+
+      (r.notes||[]).map(n=>`<div style="font-size:12px;color:var(--warn);margin-top:6px">${esc(n)}</div>`).join('')+
       r.files.map(f=>{const nm=f.path.split('/').pop();const openP=f.synced?f.path:f.staged;
       return `<div class="rfile"><span class="n">${esc(nm)}${f.synced?'':' <span style="color:var(--warn)">(로컬 사본)</span>'}</span>
       ${f.download?`<a class="btn" href="${f.download}" download>다운로드</a>`:`<button class="btn" onclick='fetch("/api/open",{method:"POST",body:JSON.stringify({path:${JSON.stringify(openP)}})})'>폴더에서 보기</button>`}</div>`}).join('');

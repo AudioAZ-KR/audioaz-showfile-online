@@ -30,7 +30,7 @@ echo "── PyInstaller 빌드 (v$VERSION)"
     --add-data "$REPO/app/base:base" --add-data "$REPO/app/naming_vocab.json:." --add-data "$REPO/app/VERSION:." \
     --collect-all numbers_parser --collect-all openpyxl \
     --hidden-import sheet2spec --hidden-import dm7_gen --hidden-import klang_gen \
-    --hidden-import sprk_gen --hidden-import x32_gen --hidden-import run_pipeline \
+    --hidden-import sprk_gen --hidden-import x32_gen --hidden-import wing_gen --hidden-import run_pipeline \
     --collect-submodules webview --hidden-import webview.platforms.cocoa \
     --collect-submodules pkg_resources \
     app_server.py > "$B/pyinstaller.log" 2>&1 ) || { tail -30 "$B/pyinstaller.log"; exit 1; }

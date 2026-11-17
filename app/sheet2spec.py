@@ -27,7 +27,7 @@ ROMAN = {'가':'ga','간':'gan','갈':'gal','감':'gam','강':'gang','경':'gyeo
  '헤':'he','늘':'neul','다':'da','은':'eun','군':'gun','산':'san','익':'ik','광':'gwang','부':'bu','울':'ul','청':'cheong','천':'cheon','팀':'tim','룩':'look','프':'peu','티':'ti','드':'deu','스':'seu','더':'deo','집':'jip','회':'hoe','련':'ryeon','수':'su','제':'je','열':'yeol','방':'bang','학':'hak','관':'gwan','사':'sa','공':'gong','장':'jang','트':'teu','홀':'hol','록':'rok'}
 
 
-WORDS = {'구즈넥': 'Goose', '싱어': 'Sing', '스피치': 'Speech', '설교자': 'Pastor', '설교': 'Pastor', '사회자': 'MC', '인도자': 'Leader',
+WORDS = {'플루트': 'Flute', '플룻': 'Flute', '퍼커션': 'Perc', '아코디언': 'Accordion', '벤조': 'Banjo', '피아노': 'Piano', '건반': 'Key', '기타': 'GTR', '베이스': 'Bass', '바이올린': 'Vln', '첼로': 'Cello', '비올라': 'Vla', '트럼펫': 'Tp', '트롬본': 'Tb', '색소폰': 'Sax', '무선': 'WL', '통역': 'Interp', '이머시브': 'Immersive', '센터': 'Center', '모노': 'Mono', '구즈넥': 'Goose', '싱어': 'Sing', '스피치': 'Speech', '설교자': 'Pastor', '설교': 'Pastor', '사회자': 'MC', '인도자': 'Leader',
          '연출': 'Dir', '예비': 'Spare', '드럼': 'Drum', '합창': 'Choir', '코러스': 'Chorus',
          '소리': 'Sori', '클릭': 'Click', '마스터건': 'MasterGun', '에스더': 'Esther', '기프티드': 'Gftid', '제이어스': 'JUS', '뉴스공장': 'NewsFactory', '수련회': 'Retreat', '고희안': 'KHA', '홀리그라운드': 'HolyGround', '롤링홀': 'RollingHall', '백석예대': 'BSU'}
 

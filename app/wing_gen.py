@@ -23,8 +23,11 @@ GROUP_COL = {'Drums': 9, 'Bass': 8, 'GTR': 7, 'AG': 6, 'Key': 5, 'Piano': 5,
 IEM_COL, MON_COL = 10, 6
 
 
-def default_base():
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'base', 'wing_default.snap')
+MODELS = {'wing': 'wing_default.snap', 'rack': 'wing_default_rack.snap', 'compact': 'wing_default_compact.snap'}
+
+
+def default_base(model='wing'):
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'base', MODELS.get(model, MODELS['wing']))
 
 
 def validate_base(path):
@@ -57,10 +60,12 @@ def _tags(old, dcas):
     return ','.join(keep + [f'#D{n}' for n in sorted(set(dcas))])
 
 
-def plan(spec, src_grp='LCL', src_size=None):
-    """시트 → WING 스트립 배치 계획. (strips, buses, mtxs, warnings)"""
+def plan(spec, src_grp='LCL', src_size=None, keep_numbers=False):
+    """시트 → WING 스트립 배치 계획. (strips, buses, mtxs, warnings)
+    keep_numbers=True 면 시트 번호 = 채널 번호 그대로(스테레오 뒷번호는 비움, 41~48은 AUX 1~8).
+    False 면 스테레오를 합친 만큼 뒤 채널을 당겨 채운다."""
     warn = []
-    chans = {c['ch']: c for c in spec['channels']}
+    chans = {c['ch']: c for c in spec['channels'] if c['name'].strip(' -')}   # '-' = 미사용
     pair_first = {a: b for a, b in spec.get('pairs', [])}
     pair_second = {b for a, b in spec.get('pairs', [])}
     strips = []
@@ -69,7 +74,10 @@ def plan(spec, src_grp='LCL', src_size=None):
             continue                                   # 스테레오 소스의 R — 앞 채널에 합쳐짐
         c = chans.get(ch) or chans.get(pair_first.get(ch)) or {'name': ''}
         if ch in pair_first and ch % 2 == 1:
-            strips.append({'src': ch, 'stereo': True, 'c': c, 'name': c['name']})
+            nm, other = c['name'], chans.get(pair_first[ch], {}).get('name', '')
+            if nm.lower().startswith('oh') and other.lower().startswith('oh'):
+                nm = 'OH'                               # OH Ride / OH HH → 스테레오 'OH'
+            strips.append({'src': ch, 'stereo': True, 'c': c, 'name': nm})
         elif ch in pair_first or ch in pair_second:
             # 짝수에서 시작하는 페어는 WING 스테레오 소스가 될 수 없다 → 모노 2채널을 좌우로
             first = ch in pair_first
@@ -86,13 +94,19 @@ def plan(spec, src_grp='LCL', src_size=None):
         if over:
             warn.append(f'소스 그룹 {src_grp}는 {src_size}개까지라 시트 {over[0]}번 이후 '
                         f'{len(over)}개 스트립은 소스 미연결(OFF)로 둡니다')
-    if len(strips) > N_CH + N_AUX:
-        dropped = strips[N_CH + N_AUX:]
+    for i, st in enumerate(strips, 1):
+        st['idx'] = st['src'] if keep_numbers else i
+    blank = [st['src'] + 1 for st in strips if st['stereo']] if keep_numbers else []   # 스테레오 뒷번호 = 빈 스트립
+    dropped = [st for st in strips if st['idx'] > N_CH + N_AUX]
+    strips = [st for st in strips if st['idx'] <= N_CH + N_AUX]
+    if dropped:
         warn.append(f'WING은 채널 40 + AUX 8 = 48스트립까지입니다 — 시트 {dropped[0]["src"]}번부터 '
-                    f'{len(dropped)}개 스트립은 넣지 못했습니다')
-        strips = strips[:N_CH + N_AUX]
-    elif len(strips) > N_CH:
-        warn.append(f'채널 40개를 넘는 {len(strips) - N_CH}개 스트립은 AUX 1~{len(strips) - N_CH}에 배치했습니다')
+                    f'{len(dropped)}개 스트립은 넣지 못했습니다'
+                    + (" ('채널 번호 = 시트 번호'를 끄면 스테레오를 합친 만큼 당겨 넣습니다)" if keep_numbers else ''))
+    aux = [st for st in strips if st['idx'] > N_CH]
+    if aux:
+        warn.append(f'채널 40번을 넘는 {len(aux)}개 스트립(시트 {aux[0]["src"]}번~)은 '
+                    f'AUX {aux[0]["idx"] - N_CH}~{aux[-1]["idx"] - N_CH}에 배치했습니다')
 
     def bus_plan(items, pairs, limit, what):
         first = {a: b for a, b in pairs}
@@ -111,10 +125,10 @@ def plan(spec, src_grp='LCL', src_size=None):
     mtx = {int(k): v for k, v in spec.get('matrix', {}).items()}
     mpairs = [(n, n + 1) for n, v in mtx.items() if v.get('link') == 'L' and mtx.get(n + 1, {}).get('link') == 'R']
     mtxs = bus_plan(mtx, mpairs, N_MTX, '매트릭스')
-    return strips, buses, mtxs, warn
+    return strips, buses, mtxs, warn, blank
 
 
-def generate(spec_path, out_path, base_path=None, src_grp='LCL', romanize=None):
+def generate(spec_path, out_path, base_path=None, src_grp='LCL', romanize=None, keep_numbers=False):
     spec = json.load(open(spec_path, encoding='utf-8'))
     base_path = base_path or default_base()
     snap = json.load(open(base_path, encoding='utf-8'))
@@ -122,7 +136,11 @@ def generate(spec_path, out_path, base_path=None, src_grp='LCL', romanize=None):
     if src_grp not in ae['io']['in']:
         raise RuntimeError(f'소스 그룹 {src_grp}가 이 스냅샷에 없습니다')
     srcs = ae['io']['in'][src_grp]
-    strips, buses, mtxs, warn = plan(spec, src_grp, len(srcs))
+    strips, buses, mtxs, warn, blank = plan(spec, src_grp, len(srcs), keep_numbers)
+    for n in blank:                                    # 시트 번호 유지: 스테레오의 뒷번호 스트립은 비워 둔다
+        if n <= N_CH + N_AUX:
+            st_ = ae['ch'][str(n)] if n <= N_CH else ae['aux'][str(n - N_CH)]
+            st_['in']['conn']['grp'], st_['in']['conn']['in'], st_['name'] = 'OFF', 1, ''
 
     bus_of = {}                                        # 시트 믹스 번호 → WING 버스 번호
     for i, b in enumerate(buses, 1):
@@ -133,7 +151,8 @@ def generate(spec_path, out_path, base_path=None, src_grp='LCL', romanize=None):
     lvl = spec.get('iem_send_db')
 
     used_dca = set()
-    for i, s in enumerate(strips, 1):
+    for s in strips:
+        i = s['idx']
         c = s['c']
         name = _ascii_name(s['name'], romanize)
         if s.get('suffix'):
@@ -183,7 +202,8 @@ def generate(spec_path, out_path, base_path=None, src_grp='LCL', romanize=None):
 
     # 자체 검증: 다시 읽어 스트립 이름·소스가 계획과 같은지
     chk = json.load(open(out_path, encoding='utf-8'))['ae_data']
-    for i, s in enumerate(strips, 1):
+    for s in strips:
+        i = s['idx']
         strip = chk['ch'][str(i)] if i <= N_CH else chk['aux'][str(i - N_CH)]
         assert len(strip['name']) <= NAME_MAX
         if strip['in']['conn']['grp'] != 'OFF':

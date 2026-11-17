@@ -523,11 +523,17 @@ def generate(req):
         src = w.get('src', 'LCL')
         if src not in wing_gen.SRC_GROUPS:
             src = 'LCL'
+        base = wing_gen.default_base(w.get('model', 'wing'))
         sp = '/tmp/showfile_spec_wing.json'
         json.dump(s, open(sp, 'w'), ensure_ascii=False)
         out = os.path.join(STAGE, spec['name'] + '.snap')
         try:
-            info = wing_gen.generate(sp, out, None, src, sheet2spec.romanize)
+            if w.get('mode') == 'hub':        # 단테 등 → AES50 B·C 분배 + DP48 리턴 (채널 스트립은 그대로)
+                info = wing_gen.generate_hub(s, out, base, src, ('B', 'C'), sheet2spec.romanize)
+                notes.append(f"WING 허브: {src} 소스 {len(info['named'])}개 네이밍 · AES50 B·C ← {src} 1:1 · "
+                             f"{src} 출력 1~16 ← DP48 리턴(B·C 1/2, 9/10, 17/18, 25/26)")
+            else:
+                info = wing_gen.generate(sp, out, base, src, sheet2spec.romanize, bool(w.get('keep', True)))
         except (RuntimeError, AssertionError, KeyError) as e:
             raise RuntimeError(f'WING 생성 실패: {e}')
         notes += [f'WING: {x}' for x in info['warnings']]
@@ -1136,6 +1142,16 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
     <div class="obody wingo">
       <div class="optt">저장 위치</div>
       <div class="saverow"><span class="p" id="wingdir"></span><button class="btn" onclick="chooseDir('wing_out_dir')">변경</button></div>
+      <div class="optt">모드 · 모델</div>
+      <div class="fwseg" id="wingmode">
+        <button type="button" data-v="mixer" onclick="setWing('mode','mixer')">채널 스트립</button>
+        <button type="button" data-v="hub" onclick="setWing('mode','hub')">허브<span>→ AES50 B·C</span></button>
+      </div>
+      <div class="fwseg" id="wingmodel">
+        <button type="button" data-v="wing" onclick="setWing('model','wing')">WING</button>
+        <button type="button" data-v="rack" onclick="setWing('model','rack')">Rack</button>
+        <button type="button" data-v="compact" onclick="setWing('model','compact')">Compact</button>
+      </div>
       <div class="optt">입력 소스</div>
       <div class="fwseg" id="wingsrc">
         <button type="button" data-src="LCL" onclick="setWingSrc('LCL')">Local</button>
@@ -1144,9 +1160,9 @@ tr.edited .nmin,tr.confirmed .nmin{border-color:var(--ok)}
         <button type="button" data-src="C" onclick="setWingSrc('C')">C</button>
         <button type="button" data-src="CRD" onclick="setWingSrc('CRD')">Card</button>
       </div>
-      <div class="fwnote">시트 n번 = 선택한 소스 n번 &middot; 스테레오 페어는 채널 1개(스테레오 소스)로 합쳐집니다 &middot; 채널 40 + AUX 8</div>
-      <div class="optt">세부 옵션</div>
-      <div id="wingopts"></div>
+      <div class="fwnote" id="wingnote"></div>
+      <div id="wingoptwrap"><div class="optt">세부 옵션</div>
+      <div id="wingopts"></div></div>
     </div>
   </div>
   <div class="out x32" id="card_x32">
@@ -1181,15 +1197,24 @@ document.documentElement.dataset.theme=curTheme;
 document.addEventListener('DOMContentLoaded',applyTheme);
 const DM7OPTS=[["links","스테레오 링크","시트 페어 + OH 관례"],["dca","DCA 어사인","OnAir/inst/Sings/Drums/AMBI"],["mix","믹스 버스 네이밍·링크","IEM 페어 + Pan Link"],["iem_send","IEM 센드 -20dB","믹스 이름에 IEM 있을 때만"],["matrix","매트릭스 네이밍","TOP/SUB/Main"]];
 const KLANGOPTS=[["links","스테레오 링크",""],["auto_group","자동 그룹","최대 8개 + 정렬"],["color_match","채널 색상 = 그룹 색",""],["panning","패닝 템플릿","드럼 이미지 + 스테레오 폭"],["i3d","i3D 모드","전 믹스"],["gain_minus15","인풋 페이더 -15dB",""],["hide_unused","미사용 채널 숨김",""],["presets_copy","KLANG 앱에 자동 등록","프리셋 폴더 복사"]];
-const WINGOPTS=[["dca","DCA 어사인","OnAir/inst/Sings/Drums/AMBI"],["mix","버스·매트릭스 네이밍","IEM 페어 = 스테레오 버스"],["iem_send","IEM 센드 -20dB","믹스 이름에 IEM 있을 때만"]];
+const WINGOPTS=[["keep","시트 번호 그대로","끄면 당겨 채움"],["dca","DCA 어사인","OnAir/inst/Sings/Drums/AMBI"],["mix","버스·매트릭스 네이밍","IEM 페어 = 스테레오 버스"],["iem_send","IEM 센드 -20dB","믹스 이름에 IEM 있을 때만"]];
 const SPRKOPTS=[["auto_chain","플러그인 체인 자동 배치","보컬/악기별 · 표에서 개별 수정"],["max64","1~64채널만","랙 64 · 레이어 4페이지 한도"]];
 const CHAIN_LABELS={auto:"자동",vocal:"보컬 체인",inst:"악기 체인",none:"빈 랙"};
 let sheets=[],sel=null,busy=false,review=null,edits={},chains={},confirmed={},isOnline=false;
-const st={dm7:{enabled:false},klang:{enabled:false},sprk:{enabled:false},x32:{enabled:false},wing:{enabled:false,src:'LCL'}};
+const st={dm7:{enabled:false},klang:{enabled:false},sprk:{enabled:false},x32:{enabled:false},wing:{enabled:false,src:'LCL',mode:'mixer',model:'wing'}};
 WINGOPTS.forEach(o=>st.wing[o[0]]=true);
-try{const ws=localStorage.getItem('wingsrc');if(ws)st.wing.src=ws;}catch(e){}
-function setWingSrc(v){st.wing.src=v;try{localStorage.setItem('wingsrc',v)}catch(e){}renderWingSrc();}
-function renderWingSrc(){document.querySelectorAll('#wingsrc button').forEach(b=>b.classList.toggle('on',b.dataset.src===st.wing.src));}
+try{for(const k of ['src','mode','model']){const v=localStorage.getItem('wing'+k);if(v)st.wing[k]=v;}}catch(e){}
+function setWingSrc(v){setWing('src',v);}
+function setWing(k,v){st.wing[k]=v;try{localStorage.setItem('wing'+k,v)}catch(e){}renderWingSrc();}
+function renderWingSrc(){
+  document.querySelectorAll('#wingsrc button').forEach(b=>b.classList.toggle('on',b.dataset.src===st.wing.src));
+  for(const k of ['mode','model'])document.querySelectorAll('#wing'+k+' button').forEach(b=>b.classList.toggle('on',b.dataset.v===st.wing[k]));
+  const hub=st.wing.mode==='hub';
+  document.getElementById('wingoptwrap').style.display=hub?'none':'';
+  document.getElementById('wingnote').textContent=hub
+    ?'시트 n번 이름을 선택한 소스 n번에 넣고 AES50 B·C로 1:1 출력, 소스 그룹 출력 1~16은 DP48 리턴. 채널 스트립은 건드리지 않습니다'
+    :'시트 n번 = 선택한 소스 n번 · 스테레오 페어는 채널 1개(스테레오 소스) · 채널 40 + AUX 8';
+}
 DM7OPTS.forEach(o=>st.dm7[o[0]]=true);KLANGOPTS.forEach(o=>st.klang[o[0]]=true);SPRKOPTS.forEach(o=>st.sprk[o[0]]=true);
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
@@ -1502,6 +1527,8 @@ def main():
             ok, msg, _ = dm7_gen.validate_base(dm7_gen.default_base(fw))
             assert ok, msg
         assert os.path.isfile(VOCAB_PATH) and os.path.isfile(SPRK_BASE)
+        for m in wing_gen.MODELS:
+            assert wing_gen.validate_base(wing_gen.default_base(m))[0], m
         print(f'SELFTEST OK v{APP_VERSION}')
         return
     window = _window_mode()

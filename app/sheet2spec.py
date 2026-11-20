@@ -83,6 +83,27 @@ def read_rows(path):
     return rows
 
 
+def read_merges(path):
+    """병합 셀 범위 [(r0, c0, r1, c1)] (0부터). 못 읽으면 빈 목록."""
+    out = []
+    try:
+        if path.lower().endswith('.numbers'):
+            from numbers_parser import Document
+            refs = Document(path).sheets[0].tables[0].merge_ranges
+        else:
+            from openpyxl import load_workbook
+            refs = [str(r) for r in load_workbook(path).active.merged_cells.ranges]
+        for ref in refs:
+            m = re.fullmatch(r'([A-Z]+)(\d+):([A-Z]+)(\d+)', ref)
+            if not m:
+                continue
+            col = lambda t: sum((ord(ch) - 64) * 26 ** i for i, ch in enumerate(reversed(t))) - 1
+            out.append((int(m.group(2)) - 1, col(m.group(1)), int(m.group(4)) - 1, col(m.group(3))))
+    except Exception:
+        pass
+    return out
+
+
 def parse(path):
     rows = read_rows(path)
     hdr = None
@@ -120,6 +141,12 @@ def parse(path):
 
     outputs = []        # (device, output, name)
     if out_cols:
+        # 출력 표의 세로 병합 셀(장비·이름)은 아래 줄에도 같은 값으로 본다 — 'TOP'을 MTRX 01·02에 걸쳐 병합한 시트 = 스테레오
+        for r0, c0, r1, c1 in read_merges(path):
+            if c0 == c1 and c0 in (out_cols['device'], out_cols['name']) and r1 > r0 and r0 < len(rows):
+                for r in range(r0 + 1, min(r1, len(rows) - 1) + 1):
+                    if c0 < len(rows[r]) and not str(rows[r][c0]).strip():
+                        rows[r][c0] = rows[r0][c0]
         for r in rows[hdr + 1:]:
             try:
                 dev = str(r[out_cols['device']]).strip()

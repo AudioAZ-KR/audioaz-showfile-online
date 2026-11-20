@@ -437,6 +437,12 @@ def generate(req):
     spec['groups'] = groups_used
     paired = {x for p in pairs for x in p}
     spec['reset_names'] = [ch for ch, nm, io in chans if io and not nm and ch not in paired]
+    # 이름이 '-'뿐인 줄 = 미사용 채널: 어떤 쇼파일에도 '-'라는 이름을 넣지 않고 기본 이름으로 되돌린다
+    dash = {c['ch'] for c in channels if not c['name'].strip(' -–—') and c['ch'] not in paired}
+    if dash:
+        channels = [c for c in channels if c['ch'] not in dash]
+        spec['channels'] = channels
+        spec['reset_names'] = sorted(set(spec['reset_names']) | dash)
     if any('AMBI' in c.get('dca', []) for c in channels):
         spec['dca_names'] = {'12': 'AMBI'}
     else:
